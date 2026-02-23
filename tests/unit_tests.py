@@ -484,8 +484,7 @@ def test:
 def test:
     print('hello')
     print('world')
-
-```""" == my_result
+    \n```""" == my_result
 
 
 def test_extract_with_metadata():
