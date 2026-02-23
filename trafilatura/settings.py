@@ -434,7 +434,7 @@ BASIC_CLEAN_XPATH = XPath(
 )
 
 TAG_CATALOG = frozenset(
-    ["blockquote", "code", "del", "head", "hi", "lb", "list", "p", "pre", "quote"]
+    ["blockquote", "code", "del", "head", "hi", "lb", "list", "p", "pre", "quote", "nobr"]
 )
 # + list(CUT_EMPTY_ELEMS)
 
