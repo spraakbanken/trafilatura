@@ -138,7 +138,8 @@ MOCK_PAGES = {
     'https://www.faz.net/aktuell/wirtschaft/nutzerbasierte-abrechnung-musik-stars-fordern-neues-streaming-modell-16604622.html': 'faz.net.streaming.html',
     'https://www.ndr.de/nachrichten/info/16-Coronavirus-Update-Wir-brauchen-Abkuerzungen-bei-der-Impfstoffzulassung,podcastcoronavirus140.html': 'ndr.de.podcastcoronavirus140.html',
     "https://www.mercurynews.com/2023/01/16/letters-1119/": "mercurynews.com.2023.01.16.letters-1119.html",
-    'http://www.pcgamer.com/2012/08/09/skyrim-part-1/': "pcgamer.com.skyrim.html"
+    'http://www.pcgamer.com/2012/08/09/skyrim-part-1/': "pcgamer.com.skyrim.html",
+    'https://data.riksdagen.se/dokument/H2B51.html': 'data.riksdagen.se.dokument.h2b51.html',
 }
 # '': '', \
 
@@ -494,6 +495,8 @@ def test_extract(xmloutput, formatting):
     if xmloutput is False:
         assert 'Reuters files' not in result
 
+    result = do_load_page('https://data.riksdagen.se/dokument/H2B51.html')
+    assert 'AP-fonden' in result
 
 
     #result = load_mock_page('https://www.lanouvellerepublique.fr/indre-et-loire/commune/saint-martin-le-beau/family-park-la-derniere-saison-a-saint-martin-le-beau', xmloutput)

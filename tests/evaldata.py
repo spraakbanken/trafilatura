@@ -11503,4 +11503,8 @@ EVAL_PAGES = {
     'with': ['Coinbase and Coinbase Pro are two of the most popular cryptocurrency exchanges', ' At a Glance ', '1 GBP withdrawal'],
     'without': ['Jacob Wade is a personal finance expert', 'Kraken vs. Coinbase', 'We recommend the best products'],
 },
+'https://data.riksdagen.se/dokument/H2B51.html': {
+    'file': 'data.riksdagen.se.dokument.h2b51.html',
+    'with': ['AP-fonden']
+}
 }
