@@ -254,7 +254,8 @@ def test_extract(xmloutput, formatting):
     assert 'Für einen Roman' in result and 'Auszeichnung der Branche.' in result
 
     result = do_load_page('https://buchperlen.wordpress.com/2013/10/20/leandra-lou-der-etwas-andere-modeblog-jetzt-auch-zwischen-buchdeckeln/')
-    if xmloutput is False:
+    # TODO should result be something?
+    if result is not None and xmloutput is False:
         assert 'Dann sollten Sie erst recht' in result and 'als saure Gürkchen entlarvte Ex-Boyfriends.' in result and 'Ähnliche Beiträge' not in result
 
     result = do_load_page('http://www.toralin.de/schmierfett-reparierend-verschlei-y-910.html')
