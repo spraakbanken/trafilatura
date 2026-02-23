@@ -1,5 +1,10 @@
 # Trafilatura: Discover and Extract Text Data on the Web
 
+> [!NOTE]
+> This a fork of [adbar/trafilatura](https://github.com/adbar/trafilatura).
+> This branch (`main`) includes all updates that is proposed upstream.
+> The branch `master` is used to sync upstream.
+
 <br/>
 
 <img alt="Trafilatura Logo" src="https://raw.githubusercontent.com/adbar/trafilatura/master/docs/trafilatura-logo.png" align="center" width="60%"/>
@@ -18,7 +23,6 @@
 <img alt="Demo as GIF image" src="https://raw.githubusercontent.com/adbar/trafilatura/master/docs/trafilatura-demo.gif" align="center" width="80%"/>
 
 <br/>
-
 
 ## Introduction
 
@@ -43,37 +47,35 @@ by companies like HuggingFace, IBM, and Microsoft Research as well as institutio
 the Allen Institute, Stanford, the Tokyo Institute of Technology, and
 the University of Munich.
 
-
 ### Features
 
 - Advanced web crawling and text discovery:
-   - Support for sitemaps (TXT, XML) and feeds (ATOM, JSON, RSS)
-   - Smart crawling and URL management (filtering and deduplication)
+  - Support for sitemaps (TXT, XML) and feeds (ATOM, JSON, RSS)
+  - Smart crawling and URL management (filtering and deduplication)
 
 - Parallel processing of online and offline input:
-   - Live URLs, efficient and polite processing of download queues
-   - Previously downloaded HTML files and parsed HTML trees
+  - Live URLs, efficient and polite processing of download queues
+  - Previously downloaded HTML files and parsed HTML trees
 
 - Robust and configurable extraction of key elements:
-   - Main text (common patterns and generic algorithms like jusText and readability)
-   - Metadata (title, author, date, site name, categories and tags)
-   - Formatting and structure: paragraphs, titles, lists, quotes, code, line breaks, in-line text formatting
-   - Optional elements: comments, links, images, tables
+  - Main text (common patterns and generic algorithms like jusText and readability)
+  - Metadata (title, author, date, site name, categories and tags)
+  - Formatting and structure: paragraphs, titles, lists, quotes, code, line breaks, in-line text formatting
+  - Optional elements: comments, links, images, tables
 
 - Multiple output formats:
-   - TXT and Markdown
-   - CSV
-   - JSON
-   - HTML, XML and [XML-TEI](https://tei-c.org/)
+  - TXT and Markdown
+  - CSV
+  - JSON
+  - HTML, XML and [XML-TEI](https://tei-c.org/)
 
 - Optional add-ons:
-   - Language detection on extracted content
-   - Speed optimizations
+  - Language detection on extracted content
+  - Speed optimizations
 
 - Actively maintained with support from the open-source community:
-   - Regular updates, feature additions, and optimizations
-   - Comprehensive documentation
-
+  - Regular updates, feature additions, and optimizations
+  - Comprehensive documentation
 
 ### Evaluation and alternatives
 
@@ -86,15 +88,13 @@ For more information see the [benchmark section](https://trafilatura.readthedocs
 and the [evaluation readme](https://github.com/adbar/trafilatura/blob/master/tests/README.rst)
 to run the evaluation with the latest data and packages.
 
-
 #### Other evaluations:
 
-- Most efficient open-source library in *ScrapingHub*'s [article extraction benchmark](https://github.com/scrapinghub/article-extraction-benchmark)
+- Most efficient open-source library in _ScrapingHub_'s [article extraction benchmark](https://github.com/scrapinghub/article-extraction-benchmark)
 - Best overall tool according to [Bien choisir son outil d'extraction de contenu à partir du Web](https://hal.archives-ouvertes.fr/hal-02768510v3/document)
   (Lejeune & Barbaresi 2020)
 - Best single tool by ROUGE-LSum Mean F1 Page Scores in [An Empirical Comparison of Web Content Extraction Algorithms](https://webis.de/downloads/publications/papers/bevendorff_2023b.pdf)
   (Bevendorff et al. 2023)
-
 
 ## Usage and documentation
 
@@ -115,13 +115,11 @@ Youtube playlist with video tutorials in several languages:
 
 - [Web scraping tutorials and how-tos](https://www.youtube.com/watch?v=8GkiOM17t0Q&list=PL-pKWbySIRGMgxXQOtGIz1-nbfYLvqrci)
 
-
 ## License
 
 This package is distributed under the [Apache 2.0 license](https://www.apache.org/licenses/LICENSE-2.0.html).
 
 Versions prior to v1.8.0 are under GPLv3+ license.
-
 
 ### Contributing
 
@@ -133,7 +131,6 @@ page](https://github.com/adbar/trafilatura/issues).
 Many thanks to the
 [contributors](https://github.com/adbar/trafilatura/graphs/contributors)
 who extended the docs or submitted bug reports, features and bugfixes!
-
 
 ## Context
 
@@ -148,7 +145,7 @@ sponsoring it and contributing to its codebase**. Your support
 [on GitHub](https://github.com/sponsors/adbar) or [ko-fi.com](https://ko-fi.com/adbarbaresi)
 will help maintain and enhance this popular package.
 
-*Trafilatura* is an Italian word for [wire
+_Trafilatura_ is an Italian word for [wire
 drawing](https://en.wikipedia.org/wiki/Wire_drawing) symbolizing the
 refinement and conversion process. It is also the way shapes of pasta
 are formed.
@@ -159,18 +156,17 @@ Reach out via ia the software repository or the [contact
 page](https://adrien.barbaresi.eu/) for inquiries, collaborations, or
 feedback. See also social networks for the latest updates.
 
--   Barbaresi, A. [Trafilatura: A Web Scraping Library and Command-Line
-    Tool for Text Discovery and
-    Extraction](https://aclanthology.org/2021.acl-demo.15/), Proceedings
-    of ACL/IJCNLP 2021: System Demonstrations, 2021, p. 122-131.
--   Barbaresi, A. "[Generic Web Content Extraction with Open-Source
-    Software](https://hal.archives-ouvertes.fr/hal-02447264/document)",
-    Proceedings of KONVENS 2019, Kaleidoscope Abstracts, 2019.
--   Barbaresi, A. "[Efficient construction of metadata-enhanced web
-    corpora](https://hal.archives-ouvertes.fr/hal-01371704v2/document)",
-    Proceedings of the [10th Web as Corpus Workshop
-    (WAC-X)](https://www.sigwac.org.uk/wiki/WAC-X), 2016.
-
+- Barbaresi, A. [Trafilatura: A Web Scraping Library and Command-Line
+  Tool for Text Discovery and
+  Extraction](https://aclanthology.org/2021.acl-demo.15/), Proceedings
+  of ACL/IJCNLP 2021: System Demonstrations, 2021, p. 122-131.
+- Barbaresi, A. "[Generic Web Content Extraction with Open-Source
+  Software](https://hal.archives-ouvertes.fr/hal-02447264/document)",
+  Proceedings of KONVENS 2019, Kaleidoscope Abstracts, 2019.
+- Barbaresi, A. "[Efficient construction of metadata-enhanced web
+  corpora](https://hal.archives-ouvertes.fr/hal-01371704v2/document)",
+  Proceedings of the [10th Web as Corpus Workshop
+  (WAC-X)](https://www.sigwac.org.uk/wiki/WAC-X), 2016.
 
 ### Citing Trafilatura
 
@@ -180,7 +176,7 @@ acquisition. Here is how to cite it:
 [![Reference DOI: 10.18653/v1/2021.acl-demo.15](https://img.shields.io/badge/DOI-10.18653%2Fv1%2F2021.acl--demo.15-blue)](https://aclanthology.org/2021.acl-demo.15/)
 [![Zenodo archive DOI: 10.5281/zenodo.3460969](https://zenodo.org/badge/DOI/10.5281/zenodo.3460969.svg)](https://doi.org/10.5281/zenodo.3460969)
 
-``` shell
+```shell
 @inproceedings{barbaresi-2021-trafilatura,
   title = {{Trafilatura: A Web Scraping Library and Command-Line Tool for Text Discovery and Extraction}},
   author = "Barbaresi, Adrien",
@@ -191,7 +187,6 @@ acquisition. Here is how to cite it:
   year = 2021,
 }
 ```
-
 
 ### Software ecosystem
 
