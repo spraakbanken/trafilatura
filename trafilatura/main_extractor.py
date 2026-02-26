@@ -31,7 +31,7 @@ LOGGER = logging.getLogger(__name__)
 P_FORMATTING = {'hi', 'ref'}
 TABLE_ELEMS = {'td', 'th'}
 TABLE_ALL = {'td', 'th', 'hi'}
-FORMATTING = {'hi', 'ref', 'span'}
+FORMATTING = {'hi', 'ref', 'span', 'nobr'}
 CODES_QUOTES = {'code', 'quote'}
 NOT_AT_THE_END = {'head', 'ref'}
 
@@ -152,11 +152,23 @@ def is_text_element(elem: _Element) -> bool:
     return elem is not None and text_chars_test(''.join(elem.itertext())) is True
 
 
-def define_newelem(processed_elem: _Element, orig_elem: _Element) -> None:
+def define_newelem(processed_elem: _Element, orig_elem: _Element, options: Extractor) -> None:
     "Create a new sub-element if necessary."
     if processed_elem is not None:
         childelem = SubElement(orig_elem, processed_elem.tag)
         childelem.text, childelem.tail = processed_elem.text, processed_elem.tail
+        for processed_child in processed_elem:
+            if processed_child.tag == "ref" and not options.links:
+                continue
+            if processed_child.tag == "span":
+                # TODO should this be configurable
+                continue
+            if processed_child.tag == "nobr" and orig_elem.tag == "cell":
+                pass
+            elif options.focus != "recall":
+                continue
+            childchildelem = SubElement(childelem, processed_child.tag)
+            childchildelem.text, childchildelem.tail = processed_child.text, processed_child.tail
         if processed_elem.tag == 'graphic':
             copy_attributes(childelem, processed_elem)
 
@@ -236,7 +248,7 @@ def handle_quotes(element: _Element, options: Extractor) -> Optional[_Element]:
     for child in element.iter("*"):
         processed_child = process_node(child, options)  # handle_textnode(child, comments_fix=True)
         if processed_child is not None:
-            define_newelem(processed_child, processed_element)
+            define_newelem(processed_child, processed_element, options=options)
         child.tag = "done"
     if is_text_element(processed_element):
         # avoid double/nested tags
@@ -430,7 +442,7 @@ def handle_table(table_elem: _Element, potential_tags: Set[str], options: Extrac
                         processed_subchild = handle_textelem(child, potential_tags.union(["div"]), options)
                     # add child element to processed_element
                     if processed_subchild is not None:
-                        define_newelem(processed_subchild, new_child_elem)
+                        define_newelem(processed_subchild, new_child_elem,options=options)
                     child.tag = "done"
             # add to tree
             if new_child_elem.text or len(new_child_elem) > 0:

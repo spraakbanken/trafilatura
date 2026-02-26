@@ -495,10 +495,6 @@ def test_extract(xmloutput, formatting):
     if xmloutput is False:
         assert 'Reuters files' not in result
 
-    result = do_load_page('https://data.riksdagen.se/dokument/H2B51.html')
-    assert 'AP-fonden' in result
-
-
     #result = load_mock_page('https://www.lanouvellerepublique.fr/indre-et-loire/commune/saint-martin-le-beau/family-park-la-derniere-saison-a-saint-martin-le-beau', xmloutput)
     #print(result)
     #assert result == '???'
@@ -513,6 +509,17 @@ def test_extract(xmloutput, formatting):
     #        pass
     #    else:
     #        raise AssertionError(err)
+
+@pytest.mark.parametrize(("xmloutput", "formatting"), [(True, False), (False, False), (False, True)])
+@pytest.mark.parametrize(("url", "expected"), [('https://data.riksdagen.se/dokument/H2B51.html', [
+    "AP-fonden",
+    "2014-01-29"])
+])
+def test_extract_single_url(url: str, expected: list[str],xmloutput: bool,formatting: bool) -> None:
+    result = load_mock_page(url,xml_flag=xmloutput, formatting=formatting)
+
+    for expected_ in expected:
+        assert expected_ in result
 
 def test_extract_links_formatting():
     result = load_mock_page('http://www.pcgamer.com/2012/08/09/skyrim-part-1/', formatting=True, links=True)
