@@ -10,30 +10,53 @@ from copy import deepcopy
 from typing import Any, Optional, Tuple, Set, Union
 from urllib.parse import urljoin
 
-from lxml.etree import _Element, Element, SubElement, strip_elements, strip_tags, tostring
+from lxml.etree import (
+    _Element,
+    Element,
+    SubElement,
+    strip_elements,
+    strip_tags,
+    tostring,
+)
 from lxml.html import HtmlElement
 
 # own
-from .htmlprocessing import (delete_by_link_density, handle_textnode,
-                             link_density_test_tables, process_node,
-                             prune_unwanted_nodes)
+from .htmlprocessing import (
+    delete_by_link_density,
+    handle_textnode,
+    link_density_test_tables,
+    process_node,
+    prune_unwanted_nodes,
+)
 from .settings import TAG_CATALOG, Extractor
-from .utils import FORMATTING_PROTECTED, copy_attributes, is_image_file, text_chars_test, trim
+from .utils import (
+    FORMATTING_PROTECTED,
+    copy_attributes,
+    is_image_file,
+    text_chars_test,
+    trim,
+)
 from .xml import delete_element
-from .xpaths import (BODY_XPATH, COMMENTS_DISCARD_XPATH, COMMENTS_XPATH,
-                     DISCARD_IMAGE_ELEMENTS, OVERALL_DISCARD_XPATH,
-                     PRECISION_DISCARD_XPATH, TEASER_DISCARD_XPATH)
+from .xpaths import (
+    BODY_XPATH,
+    COMMENTS_DISCARD_XPATH,
+    COMMENTS_XPATH,
+    DISCARD_IMAGE_ELEMENTS,
+    OVERALL_DISCARD_XPATH,
+    PRECISION_DISCARD_XPATH,
+    TEASER_DISCARD_XPATH,
+)
 
 
 LOGGER = logging.getLogger(__name__)
 
 
-P_FORMATTING = {'hi', 'ref'}
-TABLE_ELEMS = {'td', 'th'}
-TABLE_ALL = {'td', 'th', 'hi'}
-FORMATTING = {'hi', 'ref', 'span', 'nobr'}
-CODES_QUOTES = {'code', 'quote'}
-NOT_AT_THE_END = {'head', 'ref'}
+P_FORMATTING = {"hi", "ref"}
+TABLE_ELEMS = {"td", "th"}
+TABLE_ALL = {"td", "th", "hi"}
+FORMATTING = {"hi", "ref", "span", "nobr"}
+CODES_QUOTES = {"code", "quote"}
+NOT_AT_THE_END = {"head", "ref"}
 
 
 def _log_event(msg: str, tag: Any, text: Optional[Union[bytes, str]]) -> None:
@@ -42,7 +65,7 @@ def _log_event(msg: str, tag: Any, text: Optional[Union[bytes, str]]) -> None:
 
 
 def handle_titles(element: _Element, options: Extractor) -> Optional[_Element]:
-    '''Process head elements (titles)'''
+    """Process head elements (titles)"""
     if len(element) == 0:
         # maybe needs attention?
         # if element.tail and re.search(r'\w', element.tail):
@@ -61,15 +84,15 @@ def handle_titles(element: _Element, options: Extractor) -> Optional[_Element]:
             processed_child = handle_textnode(child, options, comments_fix=False)
             if processed_child is not None:
                 title.append(processed_child)
-            child.tag = 'done'
-    if title is not None and text_chars_test(''.join(title.itertext())) is True:
+            child.tag = "done"
+    if title is not None and text_chars_test("".join(title.itertext())) is True:
         return title
     return None
 
 
 def handle_formatting(element: _Element, options: Extractor) -> Optional[_Element]:
-    '''Process formatting elements (b, i, etc. converted to hi) found
-       outside of paragraphs'''
+    """Process formatting elements (b, i, etc. converted to hi) found
+    outside of paragraphs"""
     formatting = process_node(element, options)
     if formatting is None:  #  and len(element) == 0
         return None
@@ -110,22 +133,29 @@ def handle_formatting(element: _Element, options: Extractor) -> Optional[_Elemen
     if parent is None:
         parent = element.getprevious()
     if parent is None or parent.tag not in FORMATTING_PROTECTED:
-        processed_element = Element('p')
+        processed_element = Element("p")
         processed_element.insert(0, formatting)
     else:
         processed_element = formatting
     return processed_element
 
 
-def add_sub_element(new_child_elem: _Element, subelem: _Element, processed_subchild: _Element) -> None:
+def add_sub_element(
+    new_child_elem: _Element, subelem: _Element, processed_subchild: _Element
+) -> None:
     "Add a sub-element to an existing child element."
     sub_child_elem = SubElement(new_child_elem, processed_subchild.tag)
-    sub_child_elem.text, sub_child_elem.tail = processed_subchild.text, processed_subchild.tail
+    sub_child_elem.text, sub_child_elem.tail = (
+        processed_subchild.text,
+        processed_subchild.tail,
+    )
     for attr in subelem.attrib:
         sub_child_elem.set(attr, subelem.attrib[attr])
 
 
-def process_nested_elements(child: _Element, new_child_elem: _Element, options: Extractor) -> None:
+def process_nested_elements(
+    child: _Element, new_child_elem: _Element, options: Extractor
+) -> None:
     "Iterate through an element child and rewire its descendants."
     new_child_elem.text = child.text
     for subelem in child.iterdescendants("*"):
@@ -138,7 +168,7 @@ def process_nested_elements(child: _Element, new_child_elem: _Element, options: 
             if processed_subchild is not None:
                 add_sub_element(new_child_elem, subelem, processed_subchild)
         subelem.tag = "done"
-        #subelem.getparent().remove(subelem)
+        # subelem.getparent().remove(subelem)
 
 
 def update_elem_rendition(elem: _Element, new_elem: _Element) -> None:
@@ -149,10 +179,12 @@ def update_elem_rendition(elem: _Element, new_elem: _Element) -> None:
 
 def is_text_element(elem: _Element) -> bool:
     "Find if the element contains text."
-    return elem is not None and text_chars_test(''.join(elem.itertext())) is True
+    return elem is not None and text_chars_test("".join(elem.itertext())) is True
 
 
-def define_newelem(processed_elem: _Element, orig_elem: _Element, options: Extractor) -> None:
+def define_newelem(
+    processed_elem: _Element, orig_elem: _Element, options: Extractor
+) -> None:
     "Create a new sub-element if necessary."
     if processed_elem is not None:
         childelem = SubElement(orig_elem, processed_elem.tag)
@@ -168,8 +200,11 @@ def define_newelem(processed_elem: _Element, orig_elem: _Element, options: Extra
             elif options.focus != "recall":
                 continue
             childchildelem = SubElement(childelem, processed_child.tag)
-            childchildelem.text, childchildelem.tail = processed_child.text, processed_child.tail
-        if processed_elem.tag == 'graphic':
+            childchildelem.text, childchildelem.tail = (
+                processed_child.text,
+                processed_child.tail,
+            )
+        if processed_elem.tag == "graphic":
             copy_attributes(childelem, processed_elem)
 
 
@@ -195,7 +230,9 @@ def handle_lists(element: _Element, options: Extractor) -> Optional[_Element]:
         else:
             process_nested_elements(child, new_child_elem, options)
             if child.tail is not None and child.tail.strip():
-                new_child_elem_children = [el for el in new_child_elem if el.tag != "done"]
+                new_child_elem_children = [
+                    el for el in new_child_elem if el.tag != "done"
+                ]
                 if new_child_elem_children:
                     last_subchild = new_child_elem_children[-1]
                     if last_subchild.tail is None or not last_subchild.tail.strip():
@@ -246,7 +283,9 @@ def handle_quotes(element: _Element, options: Extractor) -> Optional[_Element]:
 
     processed_element = Element(element.tag)
     for child in element.iter("*"):
-        processed_child = process_node(child, options)  # handle_textnode(child, comments_fix=True)
+        processed_child = process_node(
+            child, options
+        )  # handle_textnode(child, comments_fix=True)
         if processed_child is not None:
             define_newelem(processed_child, processed_element, options=options)
         child.tag = "done"
@@ -257,7 +296,9 @@ def handle_quotes(element: _Element, options: Extractor) -> Optional[_Element]:
     return None
 
 
-def handle_other_elements(element: _Element, potential_tags: Set[str], options: Extractor) -> Optional[_Element]:
+def handle_other_elements(
+    element: _Element, potential_tags: Set[str], options: Extractor
+) -> Optional[_Element]:
     "Handle diverse or unknown elements in the scope of relevant tags."
     # handle w3schools code
     if element.tag == "div" and "w3-code" in element.get("class", ""):
@@ -272,8 +313,13 @@ def handle_other_elements(element: _Element, potential_tags: Set[str], options: 
     if element.tag == "div":
         # make a copy and prune it in case it contains sub-elements handled on their own?
         # divcopy = deepcopy(element)
-        processed_element = handle_textnode(element, options, comments_fix=False, preserve_spaces=True)
-        if processed_element is not None and text_chars_test(processed_element.text) is True:
+        processed_element = handle_textnode(
+            element, options, comments_fix=False, preserve_spaces=True
+        )
+        if (
+            processed_element is not None
+            and text_chars_test(processed_element.text) is True
+        ):
             processed_element.attrib.clear()
             # small div-correction # could be moved elsewhere
             if processed_element.tag == "div":
@@ -284,7 +330,9 @@ def handle_other_elements(element: _Element, potential_tags: Set[str], options: 
     return None
 
 
-def handle_paragraphs(element: _Element, potential_tags: Set[str], options: Extractor) -> Optional[_Element]:
+def handle_paragraphs(
+    element: _Element, potential_tags: Set[str], options: Extractor
+) -> Optional[_Element]:
     "Process paragraphs along with their children, trim and clean the content."
     element.attrib.clear()  # todo: test if necessary
     # strip_tags(element, 'p') # change in precision due to spaces?
@@ -301,7 +349,9 @@ def handle_paragraphs(element: _Element, potential_tags: Set[str], options: Extr
             continue
         # spacing = child.tag in SPACING_PROTECTED  # todo: outputformat.startswith('xml')?
         # todo: act on spacing here?
-        processed_child = handle_textnode(child, options, comments_fix=False, preserve_spaces=True)
+        processed_child = handle_textnode(
+            child, options, comments_fix=False, preserve_spaces=True
+        )
         if processed_child is not None:
             # todo: needing attention!
             if processed_child.tag == "p":
@@ -347,7 +397,7 @@ def handle_paragraphs(element: _Element, potential_tags: Set[str], options: Extr
             #        newsub.tail = processed_child.text
             newsub.text, newsub.tail = processed_child.text, processed_child.tail
 
-            if processed_child.tag == 'graphic':
+            if processed_child.tag == "graphic":
                 image_elem = handle_image(processed_child, options)
                 if image_elem is not None:
                     newsub = image_elem
@@ -375,7 +425,9 @@ def define_cell_type(is_header: bool) -> _Element:
     return cell_element
 
 
-def handle_table(table_elem: _Element, potential_tags: Set[str], options: Extractor) -> Optional[_Element]:
+def handle_table(
+    table_elem: _Element, potential_tags: Set[str], options: Extractor
+) -> Optional[_Element]:
     "Process single table element."
     newtable = Element("table")
 
@@ -385,7 +437,7 @@ def handle_table(table_elem: _Element, potential_tags: Set[str], options: Extrac
     # calculate maximum number of columns per row, including colspan
     max_cols = 0
     diff_colspans = set()
-    for tr in table_elem.iter('tr'):
+    for tr in table_elem.iter("tr"):
         total_colspans = 0
         for td in tr.iter(TABLE_ELEMS):
             colspan = td.get("colspan", 1)
@@ -419,10 +471,16 @@ def handle_table(table_elem: _Element, potential_tags: Set[str], options: Extrac
             if len(subelement) == 0:
                 processed_cell = process_node(subelement, options)
                 if processed_cell is not None:
-                    new_child_elem.text, new_child_elem.tail = processed_cell.text, processed_cell.tail
+                    new_child_elem.text, new_child_elem.tail = (
+                        processed_cell.text,
+                        processed_cell.tail,
+                    )
             else:
                 # proceed with iteration, fix for nested elements
-                new_child_elem.text, new_child_elem.tail = subelement.text, subelement.tail
+                new_child_elem.text, new_child_elem.tail = (
+                    subelement.text,
+                    subelement.tail,
+                )
                 subelement.tag = "done"
                 for child in subelement.iterdescendants():
                     if child.tag in TABLE_ALL:
@@ -430,7 +488,9 @@ def handle_table(table_elem: _Element, potential_tags: Set[str], options: Extrac
                         if child.tag in TABLE_ELEMS:
                             # subcell_elem = define_cell_type(is_header)
                             child.tag = "cell"
-                        processed_subchild = handle_textnode(child, options, preserve_spaces=True, comments_fix=True)
+                        processed_subchild = handle_textnode(
+                            child, options, preserve_spaces=True, comments_fix=True
+                        )
                     # todo: lists in table cells
                     elif child.tag == "list" and options.focus == "recall":
                         processed_subchild = handle_lists(child, options)
@@ -439,10 +499,14 @@ def handle_table(table_elem: _Element, potential_tags: Set[str], options: Extrac
                             processed_subchild = None  # don't handle it anymore
                     else:
                         # subcell_elem = Element(child.tag)
-                        processed_subchild = handle_textelem(child, potential_tags.union(["div"]), options)
+                        processed_subchild = handle_textelem(
+                            child, potential_tags.union(["div"]), options
+                        )
                     # add child element to processed_element
                     if processed_subchild is not None:
-                        define_newelem(processed_subchild, new_child_elem,options=options)
+                        define_newelem(
+                            processed_subchild, new_child_elem, options=options
+                        )
                     child.tag = "done"
             # add to tree
             if new_child_elem.text or len(new_child_elem) > 0:
@@ -465,7 +529,9 @@ def handle_table(table_elem: _Element, potential_tags: Set[str], options: Extrac
     return None
 
 
-def handle_image(element: Optional[_Element], options: Optional[Extractor] = None) -> Optional[_Element]:
+def handle_image(
+    element: Optional[_Element], options: Optional[Extractor] = None
+) -> Optional[_Element]:
     "Process image elements and their relevant attributes."
     if element is None:
         return None
@@ -507,29 +573,33 @@ def handle_image(element: Optional[_Element], options: Optional[Extractor] = Non
     return processed_element
 
 
-def handle_textelem(element: _Element, potential_tags: Set[str], options: Extractor) -> Optional[_Element]:
-    '''Process text element and determine how to deal with its content'''
+def handle_textelem(
+    element: _Element, potential_tags: Set[str], options: Extractor
+) -> Optional[_Element]:
+    """Process text element and determine how to deal with its content"""
     new_element = None
     # bypass: nested elements
-    if element.tag == 'list':
+    if element.tag == "list":
         new_element = handle_lists(element, options)
     elif element.tag in CODES_QUOTES:
         new_element = handle_quotes(element, options)
-    elif element.tag == 'head':
+    elif element.tag == "head":
         new_element = handle_titles(element, options)
-    elif element.tag == 'p':
+    elif element.tag == "p":
         new_element = handle_paragraphs(element, potential_tags, options)
-    elif element.tag == 'lb':
+    elif element.tag == "lb":
         if text_chars_test(element.tail) is True:
             this_element = process_node(element, options)
             if this_element is not None:
-                new_element = Element('p')
+                new_element = Element("p")
                 new_element.text = this_element.tail
     elif element.tag in FORMATTING:
-        new_element = handle_formatting(element, options)  # process_node(element, options)
-    elif element.tag == 'table' and 'table' in potential_tags:
+        new_element = handle_formatting(
+            element, options
+        )  # process_node(element, options)
+    elif element.tag == "table" and "table" in potential_tags:
         new_element = handle_table(element, potential_tags, options)
-    elif element.tag == 'graphic' and 'graphic' in potential_tags:
+    elif element.tag == "graphic" and "graphic" in potential_tags:
         new_element = handle_image(element, options)
     else:
         # other elements (div, ??, ??)
@@ -537,37 +607,45 @@ def handle_textelem(element: _Element, potential_tags: Set[str], options: Extrac
     return new_element
 
 
-def recover_wild_text(tree: HtmlElement, result_body: _Element, options: Extractor, potential_tags: Any = TAG_CATALOG) -> _Element:
-    '''Look for all previously unconsidered wild elements, including outside of the determined
-       frame and throughout the document to recover potentially missing text parts'''
-    LOGGER.debug('Recovering wild text elements')
-    search_expr = './/blockquote|.//code|.//p|.//pre|.//q|.//quote|.//table|.//div[contains(@class, \'w3-code\')]'
+def recover_wild_text(
+    tree: HtmlElement,
+    result_body: _Element,
+    options: Extractor,
+    potential_tags: Any = TAG_CATALOG,
+) -> _Element:
+    """Look for all previously unconsidered wild elements, including outside of the determined
+    frame and throughout the document to recover potentially missing text parts"""
+    LOGGER.debug("Recovering wild text elements")
+    search_expr = ".//blockquote|.//code|.//p|.//pre|.//q|.//quote|.//table|.//div[contains(@class, 'w3-code')]"
     if options.focus == "recall":
-        potential_tags.update(['div', 'lb'])
-        search_expr += '|.//div|.//lb|.//list'
+        potential_tags.update(["div", "lb"])
+        search_expr += "|.//div|.//lb|.//list"
     # prune
     search_tree = prune_unwanted_sections(tree, potential_tags, options)
     # decide if links are preserved
-    if 'ref' not in potential_tags:
-        strip_tags(search_tree, 'a', 'ref', 'span')
+    if "ref" not in potential_tags:
+        strip_tags(search_tree, "a", "ref", "span")
     else:
-        strip_tags(search_tree, 'span')
+        strip_tags(search_tree, "span")
     subelems = search_tree.xpath(search_expr)
     result_body.extend(
         filter(
             lambda x: x is not None,  # type: ignore[arg-type]
-            (handle_textelem(e, potential_tags, options) for e in subelems))
+            (handle_textelem(e, potential_tags, options) for e in subelems),
+        )
     )
     return result_body
 
 
-def prune_unwanted_sections(tree: HtmlElement, potential_tags: Set[str], options: Extractor) -> HtmlElement:
-    'Rule-based deletion of targeted document sections'
+def prune_unwanted_sections(
+    tree: HtmlElement, potential_tags: Set[str], options: Extractor
+) -> HtmlElement:
+    "Rule-based deletion of targeted document sections"
     favor_precision = options.focus == "precision"
     # prune the rest
     tree = prune_unwanted_nodes(tree, OVERALL_DISCARD_XPATH, with_backup=True)
     # decide if images are preserved
-    if 'graphic' not in potential_tags:
+    if "graphic" not in potential_tags:
         tree = prune_unwanted_nodes(tree, DISCARD_IMAGE_ELEMENTS)
     # balance precision/recall
     if options.focus != "recall":
@@ -576,22 +654,32 @@ def prune_unwanted_sections(tree: HtmlElement, potential_tags: Set[str], options
             tree = prune_unwanted_nodes(tree, PRECISION_DISCARD_XPATH)
     # remove elements by link density, several passes
     for _ in range(2):
-        tree = delete_by_link_density(tree, 'div', backtracking=True, favor_precision=favor_precision)
-        tree = delete_by_link_density(tree, 'list', backtracking=False, favor_precision=favor_precision)
-        tree = delete_by_link_density(tree, 'p', backtracking=False, favor_precision=favor_precision)
+        tree = delete_by_link_density(
+            tree, "div", backtracking=True, favor_precision=favor_precision
+        )
+        tree = delete_by_link_density(
+            tree, "list", backtracking=False, favor_precision=favor_precision
+        )
+        tree = delete_by_link_density(
+            tree, "p", backtracking=False, favor_precision=favor_precision
+        )
     # tables
-    if 'table' in potential_tags or favor_precision:
+    if "table" in potential_tags or favor_precision:
         # tree = delete_by_link_density(tree, 'table', backtracking=False, favor_precision=favor_precision)
-        for elem in tree.iter('table'):
+        for elem in tree.iter("table"):
             if link_density_test_tables(elem) is True:
                 delete_element(elem, keep_tail=False)
     # also filter fw/head, table and quote elements?
     if favor_precision:
         # delete trailing titles
-        while len(tree) > 0 and (tree[-1].tag == 'head'):
+        while len(tree) > 0 and (tree[-1].tag == "head"):
             delete_element(tree[-1], keep_tail=False)
-        tree = delete_by_link_density(tree, 'head', backtracking=False, favor_precision=True)
-        tree = delete_by_link_density(tree, 'quote', backtracking=False, favor_precision=True)
+        tree = delete_by_link_density(
+            tree, "head", backtracking=False, favor_precision=True
+        )
+        tree = delete_by_link_density(
+            tree, "quote", backtracking=False, favor_precision=True
+        )
     return tree
 
 
@@ -599,12 +687,12 @@ def _extract(tree: HtmlElement, options: Extractor) -> Tuple[_Element, str, Set[
     # init
     potential_tags = set(TAG_CATALOG)
     if options.tables is True:
-        potential_tags.update(['table', 'td', 'th', 'tr'])
+        potential_tags.update(["table", "td", "th", "tr"])
     if options.images is True:
-        potential_tags.add('graphic')
+        potential_tags.add("graphic")
     if options.links is True:
-        potential_tags.add('ref')
-    result_body = Element('body')
+        potential_tags.add("ref")
+    result_body = Element("body")
     # iterate
     for expr in BODY_XPATH:
         # select tree if the expression has been found
@@ -617,26 +705,34 @@ def _extract(tree: HtmlElement, options: Extractor) -> Tuple[_Element, str, Set[
         if len(subtree) == 0:
             continue
         # no paragraphs containing text, or not enough
-        ptest = subtree.xpath('//p//text()')
+        ptest = subtree.xpath("//p//text()")
         if options.focus == "precision":
             factor = 1
         else:
             factor = 3
-        if not ptest or len(''.join(ptest)) < options.min_extracted_size * factor:  # type: ignore[attr-defined]
-            potential_tags.add('div')
+        if not ptest or len("".join(ptest)) < options.min_extracted_size * factor:  # type: ignore[attr-defined]
+            potential_tags.add("div")
         # polish list of potential tags
-        if 'ref' not in potential_tags:
-            strip_tags(subtree, 'ref')
-        if 'span' not in potential_tags:
-            strip_tags(subtree, 'span')
+        if "ref" not in potential_tags:
+            strip_tags(subtree, "ref")
+        if "span" not in potential_tags:
+            strip_tags(subtree, "span")
         LOGGER.debug(sorted(potential_tags))
         # proper extraction
-        subelems = subtree.xpath('.//*')
+        subelems = subtree.xpath(".//*")
         # e.g. only lb-elems in a div
-        if {e.tag for e in subelems} == {'lb'}:
+        if {e.tag for e in subelems} == {"lb"}:
             subelems = [subtree]
         # extract content
-        result_body.extend([el for el in (handle_textelem(e, potential_tags, options) for e in subelems) if el is not None])
+        result_body.extend(
+            [
+                el
+                for el in (
+                    handle_textelem(e, potential_tags, options) for e in subelems
+                )
+                if el is not None
+            ]
+        )
         # remove trailing titles
         while len(result_body) > 0 and (result_body[-1].tag in NOT_AT_THE_END):
             delete_element(result_body[-1], keep_tail=False)
@@ -644,40 +740,48 @@ def _extract(tree: HtmlElement, options: Extractor) -> Tuple[_Element, str, Set[
         if len(result_body) > 1:
             LOGGER.debug(trim(str(expr)))
             break
-    temp_text = ' '.join(result_body.itertext()).strip()
+    temp_text = " ".join(result_body.itertext()).strip()
     return result_body, temp_text, potential_tags
 
 
-def extract_content(cleaned_tree: HtmlElement, options: Extractor) -> Tuple[_Element, str, int]:
-    '''Find the main content of a page using a set of XPath expressions,
-       then extract relevant elements, strip them of unwanted subparts and
-       convert them'''
+def extract_content(
+    cleaned_tree: HtmlElement, options: Extractor
+) -> Tuple[_Element, str, int]:
+    """Find the main content of a page using a set of XPath expressions,
+    then extract relevant elements, strip them of unwanted subparts and
+    convert them"""
     # backup
     backup_tree = deepcopy(cleaned_tree)
 
     result_body, temp_text, potential_tags = _extract(cleaned_tree, options)
-    #if len(result_body) == 0:
+    # if len(result_body) == 0:
     #    result_body, temp_text, potential_tags = _extract(tree_backup, options)
 
     # try parsing wild <p> elements if nothing found or text too short
     # todo: test precision and recall settings here
     if len(result_body) == 0 or len(temp_text) < options.min_extracted_size:  # type: ignore[attr-defined]
-        result_body = recover_wild_text(backup_tree, result_body, options, potential_tags)
-        temp_text = ' '.join(result_body.itertext()).strip()
+        result_body = recover_wild_text(
+            backup_tree, result_body, options, potential_tags
+        )
+        temp_text = " ".join(result_body.itertext()).strip()
     # filter output
-    strip_elements(result_body, 'done')
-    strip_tags(result_body, 'div')
+    strip_elements(result_body, "done")
+    strip_tags(result_body, "div")
     # return
     return result_body, temp_text, len(temp_text)
 
 
-def process_comments_node(elem: _Element, potential_tags: Set[str], options: Extractor) -> Optional[_Element]:
-    '''Process comment node and determine how to deal with its content'''
+def process_comments_node(
+    elem: _Element, potential_tags: Set[str], options: Extractor
+) -> Optional[_Element]:
+    """Process comment node and determine how to deal with its content"""
     if elem.tag in potential_tags:
         # print(elem.tag, elem.text_content())
         processed_element = handle_textnode(elem, options, comments_fix=True)
         # test length and remove
-        if processed_element is not None:  # and processed_element.text not in COMMENTS_BLACKLIST:
+        if (
+            processed_element is not None
+        ):  # and processed_element.text not in COMMENTS_BLACKLIST:
             processed_element.attrib.clear()
             # if textfilter(elem) is True:  # ^Pingback
             #    return None
@@ -685,7 +789,9 @@ def process_comments_node(elem: _Element, potential_tags: Set[str], options: Ext
     return None
 
 
-def extract_comments(tree: HtmlElement, options: Extractor) -> Tuple[_Element, str, int, HtmlElement]:
+def extract_comments(
+    tree: HtmlElement, options: Extractor
+) -> Tuple[_Element, str, int, HtmlElement]:
     "Try to extract comments out of potential sections in the HTML."
     comments_body = Element("body")
     # define iteration strategy
@@ -707,7 +813,15 @@ def extract_comments(tree: HtmlElement, options: Extractor) -> Tuple[_Element, s
         #        comments_body.append(processed_elem)
         # processed_elems = (process_comments_node(elem, potential_tags, options) for elem in
         #                    subtree.xpath('.//*'))
-        comments_body.extend(filter(lambda x: x is not None, (process_comments_node(e, potential_tags, options) for e in subtree.xpath(".//*"))))  # type: ignore[arg-type]
+        comments_body.extend(
+            filter(
+                lambda x: x is not None,
+                (
+                    process_comments_node(e, potential_tags, options)
+                    for e in subtree.xpath(".//*")
+                ),
+            )
+        )  # type: ignore[arg-type]
         # control
         if len(comments_body) > 0:  # if it has children
             LOGGER.debug(expr)

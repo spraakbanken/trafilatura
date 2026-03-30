@@ -49,6 +49,7 @@ GUESSES = [
 
 class SitemapObject:
     "Store all necessary information on sitemap download and processing."
+
     __slots__ = [
         "base_url",
         "content",

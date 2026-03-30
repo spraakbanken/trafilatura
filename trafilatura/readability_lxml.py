@@ -104,7 +104,9 @@ class Document:
 
     __slots__ = ["doc", "min_text_length", "retry_length"]
 
-    def __init__(self, doc: HtmlElement, min_text_length: int = 25, retry_length: int = 250) -> None:
+    def __init__(
+        self, doc: HtmlElement, min_text_length: int = 25, retry_length: int = 250
+    ) -> None:
         """Generate the document
 
         :param doc: string of the html content.
@@ -165,7 +167,9 @@ class Document:
                 continue
             return cleaned_article
 
-    def get_article(self, candidates: Dict[HtmlElement, Candidate], best_candidate: Candidate) -> HtmlElement:
+    def get_article(
+        self, candidates: Dict[HtmlElement, Candidate], best_candidate: Candidate
+    ) -> HtmlElement:
         # Now that we have the top candidate, look through its siblings for
         # content that might also be related.
         # Things like preambles, content split by ads that we removed, etc.
@@ -206,7 +210,9 @@ class Document:
         #    output.append(best_candidate.elem)
         return output
 
-    def select_best_candidate(self, candidates: Dict[HtmlElement, Candidate]) -> Optional[Candidate]:
+    def select_best_candidate(
+        self, candidates: Dict[HtmlElement, Candidate]
+    ) -> Optional[Candidate]:
         if not candidates:
             return None
         sorted_candidates = sorted(
@@ -323,7 +329,9 @@ class Document:
                 if child.tag == "br":
                     child.drop_tree()
 
-    def sanitize(self, node: HtmlElement, candidates: Dict[HtmlElement, Candidate]) -> str:
+    def sanitize(
+        self, node: HtmlElement, candidates: Dict[HtmlElement, Candidate]
+    ) -> str:
         for header in node.iter("h1", "h2", "h3", "h4", "h5", "h6"):
             if self.class_weight(header) < 0 or self.get_link_density(header) > 0.33:
                 header.drop_tree()
@@ -375,7 +383,7 @@ class Document:
                 # if elem.tag == 'div' and counts["img"] >= 1:
                 #    continue
                 if counts["p"] and counts["img"] > 1 + counts["p"] * 1.3:
-                    reason = f'too many images ({counts["img"]})'
+                    reason = f"too many images ({counts['img']})"
                 elif counts["li"] > counts["p"] and elem.tag not in LIST_TAGS:
                     reason = "more <li>s than <p>s"
                 elif counts["input"] > (counts["p"] / 3):
@@ -438,7 +446,6 @@ class Document:
         return _tostring(self.doc)
 
 
-
 # Port of isProbablyReaderable from mozilla/readability.js to Python.
 # https://github.com/mozilla/readability
 # License of forked code: Apache-2.0.
@@ -472,7 +479,7 @@ def is_node_visible(node: HtmlElement) -> bool:
     return True
 
 
-def is_probably_readerable(html: HtmlElement, options: Any={}) -> bool:
+def is_probably_readerable(html: HtmlElement, options: Any = {}) -> bool:
     """
     Decides whether or not the document is reader-able without parsing the whole thing.
     """

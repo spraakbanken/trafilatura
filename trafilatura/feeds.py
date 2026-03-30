@@ -72,6 +72,7 @@ LINK_VALIDATION_RE = re.compile(
 
 class FeedParameters:
     "Store necessary information to proceed a feed."
+
     __slots__ = ["base", "domain", "ext", "lang", "ref"]
 
     def __init__(

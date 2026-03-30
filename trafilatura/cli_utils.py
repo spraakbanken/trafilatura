@@ -4,6 +4,7 @@ Functions dedicated to command-line processing.
 
 try:
     import gzip
+
     HAS_GZIP = True
 except ImportError:
     HAS_GZIP = False
@@ -35,7 +36,7 @@ from .downloads import (
     add_to_compressed_dict,
     buffered_downloads,
     buffered_response_downloads,
-    load_download_buffer
+    load_download_buffer,
 )
 from .feeds import find_feed_urls
 from .meta import reset_caches
@@ -401,9 +402,7 @@ def probe_homepage(args: Any) -> None:
     input_urls = load_input_urls(args)
     options = args_to_extractor(args)
 
-    for url, result in buffered_downloads(
-        input_urls, args.parallel, options=options
-    ):
+    for url, result in buffered_downloads(input_urls, args.parallel, options=options):
         if result is not None:
             result = html2txt(result)
             if (

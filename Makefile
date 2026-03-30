@@ -26,7 +26,7 @@ help:
 
 
 PLATFORM := `uname -o`
-PROJECT_SRC := src
+PROJECT_SRC := trafilatura
 
 ifeq (${VIRTUAL_ENV},)
   VENV_NAME = .venv

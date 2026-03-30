@@ -152,8 +152,8 @@ OG_AUTHOR = {"og:author", "og:article:author"}
 
 URL_SELECTORS = [
     './/head//link[@rel="canonical"]',
-    './/head//base',
-    './/head//link[@rel="alternate"][@hreflang="x-default"]'
+    ".//head//base",
+    './/head//link[@rel="alternate"][@hreflang="x-default"]',
 ]
 
 
@@ -275,7 +275,7 @@ def examine_meta(tree: HtmlElement) -> Document:
             # site name
             elif name_attr in METANAME_PUBLISHER:
                 metadata.sitename = metadata.sitename or content_attr
-            # image    
+            # image
             elif name_attr in METANAME_IMAGE:
                 metadata.image = metadata.image or content_attr
             # twitter
