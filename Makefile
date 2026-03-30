@@ -49,16 +49,17 @@ info:
 	@echo "Platform: ${PLATFORM}"
 	@echo "INVENV: '${INVENV}'"
 
+## alias for 'install-dev'
 dev: install-dev
 
 ## setup development environment
-install-dev: install-pre-commit
+install-dev:
 	uv sync --all-packages --dev
 
 ## install pre-commit hooks
 install-pre-commit: .git/hooks/pre-commit
 .git/hooks/pre-commit: .pre-commit-config.yaml
-	if command -v prek > /dev/null; then prek install -f; else if command -v pre-commit > /dev/null; then pre-commit install; else echo "WARN: neither 'prek' nor 'pre-commit' is installed"; fi; fi
+	if command -v prek > /dev/null; then prek install; else if command -v pre-commit > /dev/null; then pre-commit install; else echo "WARN: neither 'prek' nor 'pre-commit' is installed"; fi; fi
 
 ## setup production environment
 install:

@@ -4,6 +4,8 @@ Module bundling functions related to HTML and text processing,
 content filtering and language detection.
 """
 
+import sys
+
 try:
     import gzip
 
@@ -23,7 +25,7 @@ except ImportError:
 
 from functools import lru_cache
 from itertools import islice
-from typing import Any, cast, List, Literal, Optional, Tuple, Union
+from typing import Any, List, Literal, Optional, Tuple, Union, cast
 from unicodedata import normalize
 
 # response compression
@@ -35,11 +37,16 @@ except ImportError:
     HAS_BROTLI = False
 
 try:
-    import zstandard
+    if sys.version_info >= (3, 14):
+        from compression import zstd
+    else:
+        from backports import zstd
 
-    HAS_ZSTD = True
 except ImportError:
     HAS_ZSTD = False
+else:
+    HAS_ZSTD = True
+
 
 # language detection
 try:
@@ -61,7 +68,6 @@ from lxml.html import HtmlElement, HTMLParser, fromstring
 
 # response types
 from urllib3.response import HTTPResponse
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -119,11 +125,11 @@ def handle_compressed_file(filecontent: bytes) -> bytes:
             return gzip.decompress(filecontent)
         except Exception:  # EOFError, OSError, gzip.BadGzipFile
             LOGGER.warning("invalid GZ file")
-    # try zstandard
+    # try zstd
     if HAS_ZSTD and filecontent[:4] == b"\x28\xb5\x2f\xfd":
         try:
-            return zstandard.decompress(filecontent)  # max_output_size=???
-        except zstandard.ZstdError:
+            return zstd.decompress(filecontent)  # max_output_size=???
+        except zstd.ZstdError:
             LOGGER.warning("invalid ZSTD file")
     # try brotli
     if HAS_BROTLI:

@@ -17,7 +17,10 @@ except ImportError:
     HAS_BROTLI = False
 
 try:
-    import zstandard
+    if sys.version_info >= (3, 14):
+        from compression import zstd
+    else:
+        from backports import zstd
 
     HAS_ZSTD = True
 except ImportError:
@@ -27,13 +30,12 @@ from time import sleep
 from unittest.mock import patch
 
 import pytest
-
 from courlan import UrlStore
 
+import trafilatura.downloads
 from trafilatura.cli import parse_args
 from trafilatura.cli_utils import download_queue_processing, url_processing_pipeline
 from trafilatura.core import Extractor, extract
-import trafilatura.downloads
 from trafilatura.downloads import (
     DEFAULT_HEADERS,
     HAS_PYCURL,
@@ -53,7 +55,6 @@ from trafilatura.downloads import (
 )
 from trafilatura.settings import DEFAULT_CONFIG, args_to_extractor, use_config
 from trafilatura.utils import decode_file, handle_compressed_file, load_html
-
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
@@ -256,7 +257,7 @@ def test_decode():
     if HAS_BROTLI:
         compressed_strings.append(brotli.compress(html_string.encode("utf-8")))
     if HAS_ZSTD:
-        compressed_strings.append(zstandard.compress(html_string.encode("utf-8")))
+        compressed_strings.append(zstd.compress(html_string.encode("utf-8")))
 
     for compressed_string in compressed_strings:
         assert handle_compressed_file(compressed_string) == html_string.encode("utf-8")
