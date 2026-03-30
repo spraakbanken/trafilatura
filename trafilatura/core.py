@@ -93,8 +93,7 @@ def determine_returnstring(document: Document, options: Extractor) -> str:
             header = ""
         returnstring = f"{header}{xmltotxt(document.body, options.formatting)}"
         if document.commentsbody is not None:
-            returnstring = \
-                f"{returnstring}\n{xmltotxt(document.commentsbody, options.formatting)}".strip()
+            returnstring = f"{returnstring}\n{xmltotxt(document.commentsbody, options.formatting)}".strip()
     # normalize Unicode format (defaults to NFC)
     return normalize_unicode(returnstring)
 
@@ -194,7 +193,9 @@ def bare_extraction(
     """
 
     # deprecations
-    _check_deprecation(no_fallback=no_fallback, as_dict=as_dict, max_tree_size=max_tree_size)
+    _check_deprecation(
+        no_fallback=no_fallback, as_dict=as_dict, max_tree_size=max_tree_size
+    )
     fast = fast or no_fallback
 
     # regroup extraction options
@@ -235,7 +236,6 @@ def bare_extraction(
 
         # extract metadata if necessary
         if options.with_metadata:
-
             document = extract_metadata(
                 tree,
                 options.url,
@@ -440,7 +440,8 @@ def extract(
         settingsfile=settingsfile,
         prune_xpath=prune_xpath,
         config=config,
-        options=options)
+        options=options,
+    )
     return document.text if document is not None else None
 
 
@@ -527,59 +528,62 @@ def extract_with_metadata(
         settingsfile=settingsfile,
         prune_xpath=prune_xpath,
         config=config,
-        options=options)
+        options=options,
+    )
 
 
 def _check_deprecation(
-        no_fallback: bool = False,
-        as_dict: bool = False,
-        max_tree_size: Optional[int] = None,
-)-> None:
-    '''Check deprecated or to-be-deprecated params'''
+    no_fallback: bool = False,
+    as_dict: bool = False,
+    max_tree_size: Optional[int] = None,
+) -> None:
+    """Check deprecated or to-be-deprecated params"""
     if no_fallback:
         warnings.warn(
             '"no_fallback" will be deprecated in a future version, use "fast" instead',
-            PendingDeprecationWarning
+            PendingDeprecationWarning,
         )
     if as_dict:
         warnings.warn(
             '"as_dict" will be deprecated, use the .as_dict() method on bare_extraction results',
-            PendingDeprecationWarning
+            PendingDeprecationWarning,
         )
     if max_tree_size:
         raise ValueError("max_tree_size is deprecated, use settings.cfg file instead")
 
 
 def _internal_extraction(
-        filecontent: Any,
-        url: Optional[str] = None,
-        record_id: Optional[str] = None,
-        fast: bool = False,
-        no_fallback: bool = False,
-        favor_precision: bool = False,
-        favor_recall: bool = False,
-        include_comments: bool = True,
-        output_format: str = "txt",
-        tei_validation: bool = False,
-        target_language: Optional[str] = None,
-        include_tables: bool = True,
-        include_images: bool = False,
-        include_formatting: bool = False,
-        include_links: bool = False,
-        deduplicate: bool = False,
-        date_extraction_params: Optional[Dict[str, Any]] = None,
-        with_metadata: bool = False,
-        only_with_metadata: bool = False,
-        max_tree_size: Optional[int] = None,
-        url_blacklist: Optional[Set[str]] = None,
-        author_blacklist: Optional[Set[str]] = None,
-        settingsfile: Optional[str] = None,
-        prune_xpath: Optional[Any] = None,
-        config: Any = DEFAULT_CONFIG,
-        options: Optional[Extractor] = None,
+    filecontent: Any,
+    url: Optional[str] = None,
+    record_id: Optional[str] = None,
+    fast: bool = False,
+    no_fallback: bool = False,
+    favor_precision: bool = False,
+    favor_recall: bool = False,
+    include_comments: bool = True,
+    output_format: str = "txt",
+    tei_validation: bool = False,
+    target_language: Optional[str] = None,
+    include_tables: bool = True,
+    include_images: bool = False,
+    include_formatting: bool = False,
+    include_links: bool = False,
+    deduplicate: bool = False,
+    date_extraction_params: Optional[Dict[str, Any]] = None,
+    with_metadata: bool = False,
+    only_with_metadata: bool = False,
+    max_tree_size: Optional[int] = None,
+    url_blacklist: Optional[Set[str]] = None,
+    author_blacklist: Optional[Set[str]] = None,
+    settingsfile: Optional[str] = None,
+    prune_xpath: Optional[Any] = None,
+    config: Any = DEFAULT_CONFIG,
+    options: Optional[Extractor] = None,
 ) -> Optional[Document]:
-    '''Internal method to do the extraction'''
-    _check_deprecation(no_fallback=no_fallback, as_dict=False, max_tree_size=max_tree_size)
+    """Internal method to do the extraction"""
+    _check_deprecation(
+        no_fallback=no_fallback, as_dict=False, max_tree_size=max_tree_size
+    )
 
     # regroup extraction options
     if not options or not isinstance(options, Extractor):

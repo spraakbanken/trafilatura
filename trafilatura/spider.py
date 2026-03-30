@@ -43,7 +43,18 @@ MAX_KNOWN_URLS = 100000
 
 class CrawlParameters:
     "Store necessary information to manage a focused crawl."
-    __slots__ = ["start", "base", "lang", "rules", "ref", "i", "known_num", "is_on", "prune_xpath"]
+
+    __slots__ = [
+        "start",
+        "base",
+        "lang",
+        "rules",
+        "ref",
+        "i",
+        "known_num",
+        "is_on",
+        "prune_xpath",
+    ]
 
     def __init__(
         self,

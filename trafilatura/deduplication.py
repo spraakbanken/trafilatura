@@ -22,7 +22,9 @@ STRIP_EXTENSION = re.compile(r"\.[^/?#]{2,63}$")
 
 BIN_COUNT_FUNC = getattr(int, "bit_count", lambda x: bin(x).count("1"))
 
-PUNCT_TBL = str.maketrans({i: " " for i in range(0x10FFFF) if unicodedata.category(chr(i))[0] == "P"})
+PUNCT_TBL = str.maketrans(
+    {i: " " for i in range(0x10FFFF) if unicodedata.category(chr(i))[0] == "P"}
+)
 
 
 @lru_cache(maxsize=1024)
@@ -81,6 +83,7 @@ def generate_bow_hash(inputstring: str, length: int = 24) -> bytes:
 
 class Simhash:
     "Implement a basic Charikar hashing approach of string similarity."
+
     __slots__ = ["hash", "length"]
 
     def __init__(

@@ -74,9 +74,7 @@ def test_atom_extraction():
     params = FeedParameters("http://example.org/", "example.org", "http://example.org")
     assert extract_links(
         f'{XMLDECL}<link href="http://example.org/article1/"rest"/>', params
-    ) == [
-        "http://example.org/article1/"
-    ]  # TODO: remove slash?
+    ) == ["http://example.org/article1/"]  # TODO: remove slash?
 
 
 def test_rss_extraction():
@@ -91,9 +89,7 @@ def test_rss_extraction():
     # CDATA
     assert extract_links(
         f"{XMLDECL}<link><![CDATA[http://example.org/article1/]]></link>", params
-    ) == [
-        "http://example.org/article1/"
-    ]  # TODO: remove slash?
+    ) == ["http://example.org/article1/"]  # TODO: remove slash?
 
     # spaces
     params = FeedParameters("https://www.ak-kurier.de/", "ak-kurier.de", "")

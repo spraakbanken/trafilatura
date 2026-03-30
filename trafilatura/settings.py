@@ -10,9 +10,11 @@ from typing import Any, Dict, List, Optional, Set
 
 try:
     from os import sched_getaffinity
+
     CPU_COUNT = len(sched_getaffinity(0))
 except ImportError:
     from os import cpu_count
+
     CPU_COUNT = cpu_count() or 1
 
 from pathlib import Path
@@ -62,6 +64,7 @@ CONFIG_MAPPING = {
 # todo Python >= 3.10: use dataclass with slots=True
 class Extractor:
     "Defines a class to store all extraction options."
+
     __slots__ = [
         "config",
         # general
@@ -206,6 +209,7 @@ def set_date_params(extensive: bool = True) -> Dict[str, Any]:
 # todo Python >= 3.10: use dataclass with slots=True
 class Document:
     "Defines a class to store all necessary data and metadata fields for extracted information."
+
     __slots__ = [
         "title",
         "author",
@@ -279,7 +283,7 @@ class Document:
         self.filedate: Optional[str] = filedate
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Document':
+    def from_dict(cls, data: Dict[str, Any]) -> "Document":
         "Set a series of attributes using a dictionary."
         doc = cls()
         for key, value in data.items():
@@ -434,7 +438,19 @@ BASIC_CLEAN_XPATH = XPath(
 )
 
 TAG_CATALOG = frozenset(
-    ["blockquote", "code", "del", "head", "hi", "lb", "list", "p", "pre", "quote", "nobr"]
+    [
+        "blockquote",
+        "code",
+        "del",
+        "head",
+        "hi",
+        "lb",
+        "list",
+        "p",
+        "pre",
+        "quote",
+        "nobr",
+    ]
 )
 # + list(CUT_EMPTY_ELEMS)
 

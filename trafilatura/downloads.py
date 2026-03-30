@@ -103,6 +103,7 @@ CURL_SSL_ERRORS = {35, 54, 58, 59, 60, 64, 66, 77, 82, 83, 91}
 
 class Response:
     "Store information gathered in a HTTP response object."
+
     __slots__ = ["data", "headers", "html", "status", "url"]
 
     def __init__(self, data: bytes, status: int, url: str) -> None:
