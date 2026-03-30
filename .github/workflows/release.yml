@@ -1,0 +1,150 @@
+name: release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+  pull_request:
+  merge_group:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+
+env:
+  MINIMUM_PYTHON_VERSION: "3.10"
+  UV_VERSION: "0.11.2"
+
+jobs:
+  build:
+    # This action builds distribution files for upload to PyPI
+
+    name: ubuntu / 3.10 / build
+    runs-on: ubuntu-latest
+    steps:
+      #----------------------------------------------
+      #       check-out repo and set-up python
+      #----------------------------------------------
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v5.0.0
+        with:
+          persist-credentials: false
+          submodules: true
+
+      #----------------------------------------------
+      #  -----  setup python   -----
+      #----------------------------------------------
+      - name: Set up the environment
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        id: setup-python
+        with:
+          python-version: ${{ env.MINIMUM_PYTHON_VERSION }}
+
+      #----------------------------------------------
+      #  -----  setup uv and load cache   -----
+      #----------------------------------------------
+      - name: Set up uv
+        uses: astral-sh/setup-uv@5a095e7a2014a4212f075830d4f7277575a9d098 # 7.3.1
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+
+      #----------------------------------------------
+      #  -----  build distribution -----
+      #----------------------------------------------
+      - name: Build distribution
+        run: make build
+
+      #----------------------------------------------
+      #  -----  upload artifacts  -----
+      #----------------------------------------------
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: pypi_files
+          path: dist
+
+  test-build:
+    # This action runs the test suite on the built artifact in the `build` action.
+    # The default is to run this in ubuntu, macos and windows
+
+    name: ${{ matrix.os }} / 3.10 / test built artifact
+    needs: [ build ]
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu
+          - macos
+          - windows
+
+    runs-on: ${{ matrix.os }}-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v5.0.0
+        with:
+          persist-credentials: false
+          submodules: true
+
+      - name: set up python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ env.MINIMUM_PYTHON_VERSION }}
+
+      - name: get dist artifacts
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3
+        with:
+          name: pypi_files
+          path: dist
+
+      - run: rm -r trafilatura
+      - run: pip install typing-extensions
+      - run: pip install -r tests/requirements-testing.lock
+      - run: pip install trafilatura --no-index --no-deps --find-links dist --force-reinstall
+      - run: pytest
+
+  # https://github.com/marketplace/actions/alls-green#why used for branch protection checks
+  release-check:
+    if: always()
+    needs:
+      - build
+      - test-build
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Decide whether the needed jobs succeeded or failed
+        uses: re-actors/alls-green@05ac9388f0aebcb5727afa17fcccfecd6f8ec5fe # v1.2.2
+        with:
+          jobs: ${{ toJSON(needs) }}
+          # allowed-failures: coverage
+
+  publish:
+    # This action publishes the built and tested artifact to PyPI, but only on a tag
+
+    needs:
+      - test-build
+    if: success() && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      # IMPORTANT: this permission is mandatory for trusted publishing
+      id-token: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v5.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Set up Python ${{ env.MINIMUM_PYTHON_VERSION }}
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ env.MINIMUM_PYTHON_VERSION }}
+      - name: get dist artifacts
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3
+        with:
+          name: pypi_files
+          path: dist
+
+      - name: Publish package to PyPI
+        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0

@@ -1,0 +1,119 @@
+# Run scheduled (rolling) jobs on a nightly basis, as your crate may break independently of any
+# given PR. E.g., updates to rust nightly and updates to this crates dependencies. See check.yml for
+# information about how the concurrency cancellation and workflow triggering works
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  schedule:
+    - cron: "7 7 * * *"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+name: rolling
+
+env:
+  UV_VERSION: "0.11.2"
+
+jobs:
+  # https://twitter.com/mycoliza/status/1571295690063753218
+  nightly:
+    runs-on: ubuntu-latest
+    name: ubuntu / ${{ matrix.python-version }}
+    strategy:
+      max-parallel: 4
+      fail-fast: false
+      matrix:
+        python-version: [ "3.15-dev" ]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v5.0.0
+        with:
+          persist-credentials: false
+          submodules: true
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@5a095e7a2014a4212f075830d4f7277575a9d098 # 7.3.1
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+
+      - name: Install python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - run: python --version
+
+      - name: uv lock
+        if: hashFiles('uv.lock') == ''
+        run: uv lock
+
+      - name: uv sync --dev
+        run: uv sync --dev --all-packages --all-extras
+
+      - name: make test
+        run: make test
+
+  # https://twitter.com/alcuadrado/status/1571291687837732873
+  update:
+    # This action checks that updating the dependencies of this crate to the latest available that
+    # satisfy the versions in pyproject.toml does not break this crate. This is important as consumers
+    # of this crate will generally use the latest available crates. This is subject to the standard
+    # Cargo semver rules (i.e cargo does not update to a new major version unless explicitly told
+    # to).
+    runs-on: ubuntu-latest
+    name: ubuntu / ${{ matrix.python-version }} / updates work
+    strategy:
+      max-parallel: 4
+      fail-fast: false
+      matrix:
+        python-version: [ "3.14" ]
+    # There's no point running this if no uv.lock was checked in in the first place, since we'd
+    # just redo what happened in the regular test job. Unfortunately, hashFiles only works in if on
+    # steps, so we repeat it.
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v5.0.0
+        with:
+          persist-credentials: false
+          submodules: true
+
+      - name: Set up uv
+        if: hashFiles('uv.lock') != ''
+        uses: astral-sh/setup-uv@5a095e7a2014a4212f075830d4f7277575a9d098 # 7.3.1
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+
+      - name: Install ${{ matrix.python-version }}
+        if: hashFiles('uv.lock') != ''
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: uv sync --dev --upgrade
+        if: hashFiles('uv.lock') != ''
+        run: uv sync --dev --upgrade --all-packages --all-extras
+
+      - name: make test
+        if: hashFiles('uv.lock') != ''
+        run: make test
+
+  # https://github.com/marketplace/actions/alls-green#why used for branch protection checks
+  rolling-check:
+    if: always()
+    needs:
+      - nightly
+      - update
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Decide whether the needed jobs succeeded or failed
+        uses: re-actors/alls-green@05ac9388f0aebcb5727afa17fcccfecd6f8ec5fe # v1.2.2
+        with:
+          jobs: ${{ toJSON(needs) }}
