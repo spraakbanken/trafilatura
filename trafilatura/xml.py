@@ -316,7 +316,7 @@ def replace_element_text(element: _Element, include_formatting: bool) -> str:
             elem_text = elem_text.strip()
         elif element.tag == "head":
             try:
-                number = int(element.get("rend")[1])  # type: ignore[index]
+                number = int(element.get("rend")[1])  # ty: ignore[not-subscriptable]
             except (TypeError, ValueError):
                 number = 2
             elem_text = f"{'#' * number} {elem_text}"

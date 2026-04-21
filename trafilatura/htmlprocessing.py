@@ -407,14 +407,14 @@ def convert_tags(
     if options.formatting:
         for elem in tree.iter(REND_TAG_MAPPING.keys()):
             elem.attrib.clear()
-            elem.set("rend", REND_TAG_MAPPING[elem.tag])  # type: ignore[index]
+            elem.set("rend", REND_TAG_MAPPING[elem.tag])  # ty: ignore[invalid-argument-type]
             elem.tag = "hi"
     else:
         strip_tags(tree, *REND_TAG_MAPPING.keys())
 
     # iterate over all concerned elements
     for elem in tree.iter(CONVERSIONS.keys()):
-        CONVERSIONS[elem.tag](elem)  # type: ignore[index]
+        CONVERSIONS[elem.tag](elem)  # ty: ignore[invalid-argument-type]
     # images
     if options.images:
         for elem in tree.iter("img"):
@@ -442,9 +442,9 @@ def convert_to_html(tree: _Element) -> _Element:
         conversion = HTML_CONVERSIONS[str(elem.tag)]
         # apply function or straight conversion
         if callable(conversion):
-            elem.tag = conversion(elem)
+            elem.tag = conversion(elem)  # ty: ignore[call-top-callable]
         else:
-            elem.tag = conversion  # type: ignore[assignment]
+            elem.tag = conversion
         # handle attributes
         if elem.tag == "a":
             elem.set("href", elem.attrib.pop("target", ""))

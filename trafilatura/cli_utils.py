@@ -408,7 +408,7 @@ def probe_homepage(args: Any) -> None:
             result = html2txt(result)
             if (
                 result
-                and len(result) > options.min_extracted_size  # type: ignore[attr-defined]
+                and len(result) > options.min_extracted_size
                 and any(c.isalpha() for c in result)
             ):
                 if (

@@ -5,7 +5,6 @@ Examining feeds and extracting links for further processing.
 import json
 import logging
 import re
-
 from itertools import islice
 from time import sleep
 from typing import List, Optional
@@ -146,7 +145,7 @@ def find_links(feed_string: str, params: FeedParameters) -> List[str]:
     # Atom
     if "<link " in feed_string:
         return [
-            LINK_HREF.search(link)[1]  # type: ignore[index]
+            LINK_HREF.search(link)[1]  # ty: ignore[not-subscriptable]
             for link in (
                 m[0] for m in islice(LINK_ATTRS.finditer(feed_string), MAX_LINKS)
             )

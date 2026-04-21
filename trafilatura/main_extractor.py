@@ -223,7 +223,7 @@ def handle_lists(element: _Element, options: ExtractOptions) -> Optional[_Elemen
             if processed_child is not None:
                 new_child_elem.text = processed_child.text or ""
                 if processed_child.tail and processed_child.tail.strip():
-                    new_child_elem.text += " " + processed_child.tail
+                    new_child_elem.text += " " + processed_child.tail  # ty: ignore[unsupported-operator]
                 processed_element.append(new_child_elem)
         else:
             process_nested_elements(child, new_child_elem, options)
@@ -367,8 +367,8 @@ def handle_paragraphs(
                 if len(processed_child) > 0:
                     for item in processed_child:  # children are lists
                         if text_chars_test(item.text) is True:
-                            item.text = " " + item.text  # type: ignore[operator]
-                        strip_tags(processed_child, item.tag)
+                            item.text = " " + item.text  # ty: ignore[unsupported-operator]
+                        strip_tags(processed_child, item.tag)  # ty:ignore[no-matching-overload]
                 # correct attributes
                 if child.tag == "hi":
                     newsub.set("rend", child.get("rend", ""))
@@ -628,7 +628,7 @@ def recover_wild_text(
     subelems = search_tree.xpath(search_expr)
     result_body.extend(
         filter(
-            lambda x: x is not None,  # type: ignore[arg-type]
+            lambda x: x is not None,
             (handle_textelem(e, potential_tags, options) for e in subelems),
         )
     )
@@ -710,7 +710,7 @@ def _extract(
             factor = 1
         else:
             factor = 3
-        if not ptest or len("".join(ptest)) < options.min_extracted_size * factor:  # type: ignore[attr-defined]
+        if not ptest or len("".join(ptest)) < options.min_extracted_size * factor:
             potential_tags.add("div")
         # polish list of potential tags
         if "ref" not in potential_tags:
@@ -759,7 +759,7 @@ def extract_content(
 
     # try parsing wild <p> elements if nothing found or text too short
     # todo: test precision and recall settings here
-    if len(result_body) == 0 or len(temp_text) < options.min_extracted_size:  # type: ignore[attr-defined]
+    if len(result_body) == 0 or len(temp_text) < options.min_extracted_size:
         result_body = recover_wild_text(
             backup_tree, result_body, options, potential_tags
         )
@@ -821,7 +821,7 @@ def extract_comments(
                     for e in subtree.xpath(".//*")
                 ),
             )
-        )  # type: ignore[arg-type]
+        )
         # control
         if len(comments_body) > 0:  # if it has children
             LOGGER.debug(expr)

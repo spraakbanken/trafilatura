@@ -40,7 +40,7 @@ except ImportError:
     PROXY_URL = None
 
 try:
-    import pycurl  # type: ignore
+    import pycurl
 
     CURL_SHARE = pycurl.CurlShare()
     # available options:
@@ -66,11 +66,11 @@ def create_pool(**args: Any) -> Union[urllib3.PoolManager, Any]:
     "Configure urllib3 download pool according to user-defined settings."
     manager_class = SOCKSProxyManager if PROXY_URL else urllib3.PoolManager
     manager_args = {"proxy_url": PROXY_URL} if PROXY_URL else {}
-    manager_args["num_pools"] = 50  # type: ignore[assignment]
-    return manager_class(**manager_args, **args)  # type: ignore[arg-type]
+    manager_args["num_pools"] = 50  # ty: ignore[invalid-assignment]
+    return manager_class(**manager_args, **args)
 
 
-DEFAULT_HEADERS = urllib3.util.make_headers(accept_encoding=True)  # type: ignore[no-untyped-call]
+DEFAULT_HEADERS = urllib3.util.make_headers(accept_encoding=True)
 USER_AGENT = (
     "trafilatura/" + version("trafilatura") + " (+https://github.com/adbar/trafilatura)"
 )

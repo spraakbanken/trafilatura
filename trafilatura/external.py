@@ -4,7 +4,6 @@ Functions grounding on third-party software.
 """
 
 import logging
-
 from typing import Any, Tuple
 
 # third-party
@@ -12,9 +11,9 @@ from justext.core import (
     ParagraphMaker,
     classify_paragraphs,
     revise_paragraph_classification,
-)  # type: ignore
-from justext.utils import get_stoplist, get_stoplists  # type: ignore
-from lxml.etree import _Element, Element, strip_tags, tostring
+)
+from justext.utils import get_stoplist, get_stoplists
+from lxml.etree import Element, _Element, strip_tags, tostring
 from lxml.html import HtmlElement
 
 # own
@@ -130,7 +129,7 @@ def compare_extraction(
 
     # post-processing: remove unwanted sections
     if use_readability and not jt_result:
-        body, text, len_text = sanitize_tree(body, options)  # type: ignore[arg-type]
+        body, text, len_text = sanitize_tree(body, options)
 
     return body, text, len_text
 
