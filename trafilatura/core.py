@@ -148,6 +148,7 @@ def bare_extraction(
     author_blacklist: Optional[Set[str]] = None,
     as_dict: bool = False,
     prune_xpath: Optional[Any] = None,
+    min_extracted_size: int = VALUE_NOT_SET,
     config: Any = DEFAULT_CONFIG,
     options: Optional[ExtractOptions] = None,
 ) -> Optional[Union[Document, Dict[str, Any]]]:
@@ -217,6 +218,7 @@ def bare_extraction(
             author_blacklist=author_blacklist,
             url_blacklist=url_blacklist,
             date_params=date_extraction_params,
+            min_extracted_size=min_extracted_size,
         )
 
     try:
@@ -371,6 +373,7 @@ def extract(
     author_blacklist: Optional[Set[str]] = None,
     settingsfile: Optional[str] = None,
     prune_xpath: Optional[Any] = None,
+    min_extracted_size: int = VALUE_NOT_SET,
     config: Any = DEFAULT_CONFIG,
     options: Optional[ExtractOptions] = None,
 ) -> Optional[str]:
@@ -437,6 +440,7 @@ def extract(
         author_blacklist=author_blacklist,
         settingsfile=settingsfile,
         prune_xpath=prune_xpath,
+        min_extracted_size=min_extracted_size,
         config=config,
         options=options,
     )
@@ -464,6 +468,7 @@ def extract_with_metadata(
     author_blacklist: Optional[Set[str]] = None,
     settingsfile: Optional[str] = None,
     prune_xpath: Optional[Any] = None,
+    min_extracted_size: int = VALUE_NOT_SET,
     config: Any = DEFAULT_CONFIG,
     options: Optional[ExtractOptions] = None,
 ) -> Optional[Document]:
@@ -525,6 +530,7 @@ def extract_with_metadata(
         author_blacklist=author_blacklist,
         settingsfile=settingsfile,
         prune_xpath=prune_xpath,
+        min_extracted_size=min_extracted_size,
         config=config,
         options=options,
     )
@@ -575,6 +581,7 @@ def _internal_extraction(
     author_blacklist: Optional[Set[str]] = None,
     settingsfile: Optional[str] = None,
     prune_xpath: Optional[Any] = None,
+    min_extracted_size: int = VALUE_NOT_SET,
     config: Any = DEFAULT_CONFIG,
     options: Optional[ExtractOptions] = None,
 ) -> Optional[Document]:
@@ -605,6 +612,7 @@ def _internal_extraction(
             author_blacklist=author_blacklist,
             url_blacklist=url_blacklist,
             date_params=date_extraction_params,
+            min_extracted_size=min_extracted_size,
         )
 
     # extraction
