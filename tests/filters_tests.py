@@ -7,9 +7,8 @@ from lxml import html
 
 from trafilatura import extract
 from trafilatura.metadata import Document
-from trafilatura.settings import DEFAULT_CONFIG, Extractor
+from trafilatura.settings import DEFAULT_CONFIG, ExtractOptions
 from trafilatura.utils import LANGID_FLAG, check_html_lang, language_filter
-
 
 ZERO_CONFIG = DEFAULT_CONFIG
 ZERO_CONFIG["DEFAULT"]["MIN_OUTPUT_SIZE"] = "0"
@@ -60,7 +59,7 @@ def test_filters():
     )
 
     ## recursion limit
-    options = Extractor()
+    options = ExtractOptions()
     options.max_tree_size = 500
     my_p = "<p>abc</p>"
     doc = html.fromstring("<html><body>" + my_p * 50 + "</body></html>")

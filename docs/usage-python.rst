@@ -240,17 +240,17 @@ Extraction settings
 Function parameters
 ^^^^^^^^^^^^^^^^^^^
 
-Starting from version 1.9, the ``Extractor`` class provides a convenient way to define and manage extraction parameters. It allows users to customize all options used by the extraction functions and offers a convenient shortcut compared to multiple function parameters.
+Starting from version 1.9, the ``ExtractOptions`` class provides a convenient way to define and manage extraction parameters. It allows users to customize all options used by the extraction functions and offers a convenient shortcut compared to multiple function parameters.
 
 Here is how to use the class:
 
 .. code-block:: python
 
-    # import the Extractor class from the settings module
-    >>> from trafilatura.settings import Extractor
+    # import the ExtractOptions class from the settings module
+    >>> from trafilatura.settings import ExtractOptions
 
     # set multiple options at once
-    >>> options = Extractor(output_format="json", with_metadata=True)
+    >>> options = ExtractOptions(output_format="json", with_metadata=True)
 
     # add or adjust settings as needed
     >>> options.formatting = True  # same as include_formatting

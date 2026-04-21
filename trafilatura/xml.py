@@ -5,7 +5,6 @@ All functions related to XML generation, processing and validation.
 
 import csv
 import logging
-
 from html import unescape
 from importlib.metadata import version
 from io import StringIO
@@ -14,16 +13,16 @@ from pathlib import Path
 from typing import List, Optional
 
 from lxml.etree import (
-    _Element,
+    DTD,
     Element,
     SubElement,
     XMLParser,
+    _Element,
     fromstring,
     tostring,
-    DTD,
 )
 
-from .settings import Document, Extractor
+from .settings import Document, ExtractOptions
 from .utils import (
     is_element_in_item,
     is_first_element_in_item,
@@ -34,7 +33,6 @@ from .utils import (
     sanitize_tree,
     text_chars_test,
 )
-
 
 LOGGER = logging.getLogger(__name__)
 PKG_VERSION = version("trafilatura")
@@ -208,7 +206,7 @@ def build_xml_output(docmeta: Document) -> _Element:
     return output
 
 
-def control_xml_output(document: Document, options: Extractor) -> str:
+def control_xml_output(document: Document, options: ExtractOptions) -> str:
     """Make sure the XML output is conform and valid if required"""
     strip_double_tags(document.body)
     remove_empty_elements(document.body)

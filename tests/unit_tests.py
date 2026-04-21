@@ -19,7 +19,7 @@ except ImportError:
 
 import trafilatura.htmlprocessing
 from trafilatura import bare_extraction, extract, extract_with_metadata, xml
-from trafilatura.core import Extractor
+from trafilatura.core import ExtractOptions
 from trafilatura.external import sanitize_tree, try_justext, try_readability
 from trafilatura.main_extractor import (
     handle_formatting,
@@ -65,7 +65,7 @@ MOCK_PAGES = {
     "http://exotic_tags": "exotic_tags.html",
 }
 
-DEFAULT_OPTIONS = Extractor()
+DEFAULT_OPTIONS = ExtractOptions()
 
 
 def load_mock_page(url, xml_flag=False, langcheck=None, tei_output=False):
@@ -187,7 +187,7 @@ def test_input():
         "<html><body><p>A\u0308ffin</p></body></html>", config=ZERO_CONFIG
     )
     assert testresult != "A\u0308ffin" and testresult == "Äffin"
-    options = Extractor(source="test\udcc3this")
+    options = ExtractOptions(source="test\udcc3this")
     assert options.source == "test?this"
 
     # output format
@@ -276,7 +276,7 @@ def test_python_output():
 
 def test_exotic_tags(xmloutput=False):
     options = DEFAULT_OPTIONS
-    options._add_config(ZERO_CONFIG)
+    options._populate_from_config(ZERO_CONFIG)
     # cover some edge cases with a specially crafted file
     result = load_mock_page("http://exotic_tags", xml_flag=xmloutput, tei_output=True)
     assert "Teletype text" in result and "My new car is silver." in result
@@ -517,7 +517,7 @@ trafilatura.extract("")
     element = etree.Element("hi")
     element.text = "Here is the text."
     element.tail = "And a tail."
-    options._add_config(ZERO_CONFIG)
+    options._populate_from_config(ZERO_CONFIG)
     converted = handle_formatting(element, options)
     assert etree.tostring(converted) == b"<p><hi>Here is the text.</hi>And a tail.</p>"
     # empty elements
@@ -757,7 +757,7 @@ def test_extract_with_metadata():
     parsed_doc = extract_with_metadata(my_document, target_language="en", fast=True)
     assert parsed_doc is None
 
-    with pytest.raises(ValueError) as err:
+    with pytest.raises(ValueError):
         extract_with_metadata(my_document, output_format="python")
 
 
@@ -959,7 +959,7 @@ def test_images():
 def test_links():
     """Test link extraction function"""
     options = DEFAULT_OPTIONS
-    options._add_config(ZERO_CONFIG)
+    options._populate_from_config(ZERO_CONFIG)
     assert handle_textelem(etree.Element("ref"), [], options) is None
     assert (
         handle_formatting(
@@ -1409,7 +1409,7 @@ def test_extraction_options():
     """Test the different parameters available in extract() and bare_extraction()"""
     my_html = '<html><head><meta http-equiv="content-language" content="EN"/></head><body><div="article-body"><p>Text.<!-- comment --><?php echo "This is a PHP processing instruction"; ?></p></div></body></html>'
 
-    with pytest.raises(ValueError) as err:
+    with pytest.raises(ValueError):
         extract(my_html, output_format="python")
     assert extract(my_html, config=NEW_CONFIG) is None
     assert extract(my_html, config=ZERO_CONFIG) is not None

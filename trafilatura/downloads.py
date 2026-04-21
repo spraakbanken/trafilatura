@@ -6,7 +6,6 @@ All functions needed to steer and execute downloads of web documents.
 import logging
 import os
 import random
-
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from configparser import ConfigParser
 from functools import partial
@@ -27,11 +26,10 @@ from typing import (
 
 import certifi
 import urllib3
-
 from courlan import UrlStore
 from courlan.network import redirection_test
 
-from .settings import DEFAULT_CONFIG, Extractor
+from .settings import DEFAULT_CONFIG, ExtractOptions
 from .utils import URL_BLACKLIST_REGEX, decode_file, is_acceptable_length, make_chunks
 
 try:
@@ -239,7 +237,9 @@ def _send_urllib_request(
     return None
 
 
-def _is_suitable_response(url: str, response: Response, options: Extractor) -> bool:
+def _is_suitable_response(
+    url: str, response: Response, options: ExtractOptions
+) -> bool:
     "Check if the response conforms to formal criteria."
     lentest = len(response.html or response.data or "")
     if response.status != 200:
@@ -252,7 +252,7 @@ def _is_suitable_response(url: str, response: Response, options: Extractor) -> b
 
 
 def _handle_response(
-    url: str, response: Response, decode: bool, options: Extractor
+    url: str, response: Response, decode: bool, options: ExtractOptions
 ) -> Optional[Union[Response, str]]:  # todo: only return str
     "Internal function to run safety checks on response result."
     if _is_suitable_response(url, response, options):
@@ -265,7 +265,7 @@ def fetch_url(
     url: str,
     no_ssl: bool = False,
     config: ConfigParser = DEFAULT_CONFIG,
-    options: Optional[Extractor] = None,
+    options: Optional[ExtractOptions] = None,
 ) -> Optional[str]:
     """Downloads a web page and seamlessly decodes the response.
 
@@ -283,7 +283,7 @@ def fetch_url(
     response = fetch_response(url, decode=True, no_ssl=no_ssl, config=config)
     if response and response.data:
         if not options:
-            options = Extractor(config=config)
+            options = ExtractOptions(config=config)
         if _is_suitable_response(url, response, options):
             return response.html
     return None
@@ -420,7 +420,7 @@ def _buffered_downloads(
 def buffered_downloads(
     bufferlist: List[str],
     download_threads: int,
-    options: Optional[Extractor] = None,
+    options: Optional[ExtractOptions] = None,
 ) -> Generator[Tuple[str, str], None, None]:
     "Download queue consumer, single- or multi-threaded."
     worker = partial(fetch_url, options=options)
@@ -431,7 +431,7 @@ def buffered_downloads(
 def buffered_response_downloads(
     bufferlist: List[str],
     download_threads: int,
-    options: Optional[Extractor] = None,
+    options: Optional[ExtractOptions] = None,
 ) -> Generator[Tuple[str, Response], None, None]:
     "Download queue consumer, returns full Response objects."
     config = options.config if options else DEFAULT_CONFIG

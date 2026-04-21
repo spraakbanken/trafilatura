@@ -8,7 +8,6 @@ import logging
 import os
 import sys
 import time
-
 from importlib.metadata import version
 
 import html2text
@@ -16,6 +15,7 @@ import html_text
 import justext
 import pandas as pd
 import tqdm
+
 # from rouge_score import rouge_scorer
 
 try:
@@ -27,7 +27,14 @@ from boilerpy3 import extractors
 from bs4 import BeautifulSoup
 from goose3 import Goose
 from inscriptis import get_text
-from magic_html import GeneralExtractor
+
+# custom
+from justext.core import (
+    ParagraphMaker,
+    classify_paragraphs,
+    revise_paragraph_classification,
+)
+from magic_html import GeneralExtractOptions
 from newspaper import fulltext
 from newsplease import NewsPlease
 
@@ -38,33 +45,24 @@ from resiliparse.parse.encoding import bytes_to_str, detect_encoding
 from resiliparse.parse.html import HTMLTree
 
 from trafilatura import baseline, extract, html2txt
-from trafilatura.external import jt_stoplist_init
-
-# custom
-from justext.core import (
-    ParagraphMaker,
-    classify_paragraphs,
-    preprocessor,
-    revise_paragraph_classification,
-)
 from trafilatura.baseline import basic_cleaning
-from trafilatura.htmlprocessing import tree_cleaning, prune_unwanted_nodes
+from trafilatura.external import jt_stoplist_init
+from trafilatura.htmlprocessing import tree_cleaning
 from trafilatura.readability_lxml import Document as ReadabilityDocument
-from trafilatura.settings import Extractor
-from trafilatura.utils import load_html, trim
-
+from trafilatura.settings import ExtractOptions
+from trafilatura.utils import load_html
 
 boilerpipe_extractor = (
-    extractors.ArticleExtractor()
-)  # ArticleExtractor DefaultExtractor LargestContentExtractor
+    extractors.ArticleExtractOptions()
+)  # ArticleExtractOptions DefaultExtractOptions LargestContentExtractOptions
 
 g = Goose()
 
-magic_html_extractor = GeneralExtractor()
+magic_html_extractor = GeneralExtractOptions()
 
 JT_STOPLIST = jt_stoplist_init()
 
-OPTIONS = Extractor()
+OPTIONS = ExtractOptions()
 
 
 def convert_to_str(htmlbinary):
@@ -96,7 +94,7 @@ def run_custom_2(htmlbinary):
     try:
         doc = ReadabilityDocument(tree, min_text_length=25, retry_length=250)
         return doc.summary()
-    except Exception as err:
+    except Exception:
         return ""
 
 
@@ -244,7 +242,7 @@ def run_newsplease(htmlbinary):
     try:
         article = NewsPlease.from_html(htmlbinary, url=None)
         return article.maintext
-    except Exception as err:
+    except Exception:
         # print('Newsplease exception:', err)
         return ""
 
@@ -441,7 +439,7 @@ class Evaluation:
                 true_negatives += len(item["without"])
         # full article body in gold standard
         elif self.evaltype == "fullstring":
-            n_grams = None  # TODO ngram shingling
+            _n_grams = None  # TODO ngram shingling
         return true_positives, false_negatives, false_positives, true_negatives
 
     def predict(self, dict_result, htmlstring):
