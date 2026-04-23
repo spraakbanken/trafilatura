@@ -6,7 +6,7 @@ Listing a series of settings that are applied module-wide.
 from configparser import ConfigParser
 from datetime import datetime
 from html import unescape
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional
 
 try:
     from os import sched_getaffinity
@@ -19,13 +19,59 @@ except ImportError:
 
 from pathlib import Path
 
-from lxml.etree import _Element, Element, XPath
+from lxml.etree import Element, XPath, _Element
 
 from .utils import line_processing
 
-
 SUPPORTED_FMT_CLI = ["csv", "json", "html", "markdown", "txt", "xml", "xmltei"]
 SUPPORTED_FORMATS = set(SUPPORTED_FMT_CLI) | {"python"}  # for bare_extraction() only
+
+# Download
+DOWNLOAD_TIMEOUT: int = 30
+MAX_FILE_SIZE: int = 20000000
+MIN_FILE_SIZE: int = 10
+
+# sleep between requests
+SLEEP_TIME: float = 5.0
+
+# one line per user-agent
+# USER_AGENTS =
+#     "agent1"
+#     "agent2"
+
+# cookie for HTTP requests
+# COOKIE =
+
+# maximum number of redirects that we will follow
+MAX_REDIRECTS: int = 2
+
+
+# Extraction
+MIN_EXTRACTED_SIZE: int = 250
+MIN_EXTRACTED_COMM_SIZE: int = 1
+MIN_OUTPUT_SIZE: int = 1
+MIN_OUTPUT_COMM_SIZE: int = 1
+
+
+# discard documents with too many elements
+MAX_TREE_SIZE: int = 0
+
+
+# CLI file processing only, set to 0 to disable
+EXTRACTION_TIMEOUT: int = 30
+
+
+# Deduplication
+MIN_DUPLCHECK_SIZE: int = 100
+MAX_REPETITIONS: int = 2
+
+
+# Extraction option for Htmldate
+EXTENSIVE_DATE_SEARCH: str = "on"
+
+
+# URLs in feeds and sitemaps
+EXTERNAL_URLS: str = "off"
 
 
 def use_config(
@@ -60,47 +106,10 @@ CONFIG_MAPPING = {
     "min_file_size": "MIN_FILE_SIZE",
 }
 
+VALUE_NOT_SET: int = -1
 
-# todo Python >= 3.10: use dataclass with slots=True
-class Extractor:
-    "Defines a class to store all extraction options."
 
-    __slots__ = [
-        "config",
-        # general
-        "format",
-        "fast",
-        "focus",
-        "comments",
-        "formatting",
-        "links",
-        "images",
-        "tables",
-        "dedup",
-        "lang",
-        # extraction size
-        "min_extracted_size",
-        "min_output_size",
-        "min_output_comm_size",
-        "min_extracted_comm_size",
-        # deduplication
-        "min_duplcheck_size",
-        "max_repetitions",
-        # rest
-        "max_file_size",
-        "min_file_size",
-        "max_tree_size",
-        # meta
-        "source",
-        "url",
-        "with_metadata",
-        "only_with_metadata",
-        "tei_validation",
-        "date_params",
-        "author_blacklist",
-        "url_blacklist",
-    ]
-
+class ExtractOptions:
     def __init__(
         self,
         *,
@@ -115,19 +124,33 @@ class Extractor:
         images: bool = False,
         tables: bool = True,
         dedup: bool = False,
-        lang: Optional[str] = None,
-        url: Optional[str] = None,
-        source: Optional[str] = None,
+        lang: str | None = None,
+        url: str | None = None,
+        source: str | None = None,
         with_metadata: bool = False,
         only_with_metadata: bool = False,
         tei_validation: bool = False,
-        author_blacklist: Optional[Set[str]] = None,
-        url_blacklist: Optional[Set[str]] = None,
-        date_params: Optional[Dict[str, str]] = None,
+        author_blacklist: set[str] | None = None,
+        url_blacklist: set[str] | None = None,
+        date_params: dict[str, str] | None = None,
+        min_extracted_size: int = VALUE_NOT_SET,
     ):
-        self._set_source(url, source)
-        self._set_format(output_format)
-        self._add_config(config)
+        self.source = _choose_url_or_source(url, source)
+        self.format = _validate_format(output_format)
+        # extraction size
+        self.min_extracted_size = min_extracted_size
+        self.min_output_size: int = VALUE_NOT_SET
+        self.min_output_comm_size: int = VALUE_NOT_SET
+        self.min_extracted_comm_size: int = VALUE_NOT_SET
+        # deduplication
+        self.min_duplcheck_size: int = VALUE_NOT_SET
+        self.max_repetitions: int = VALUE_NOT_SET
+        # rest
+        self.max_file_size: int = VALUE_NOT_SET
+        self.min_file_size: int = VALUE_NOT_SET
+        self.max_tree_size: int | None = None
+        self.config = config
+        self._populate_from_config(config)
         self.fast: bool = fast
         self.focus: str = (
             "recall" if recall else "precision" if precision else "balanced"
@@ -138,46 +161,49 @@ class Extractor:
         self.images: bool = images
         self.tables: bool = tables
         self.dedup: bool = dedup
-        self.lang: Optional[str] = lang
-        self.url: Optional[str] = url
+        self.lang: str | None = lang
+        self.url: str | None = url
         self.only_with_metadata: bool = only_with_metadata
         self.tei_validation: bool = tei_validation
-        self.author_blacklist: Set[str] = author_blacklist or set()
-        self.url_blacklist: Set[str] = url_blacklist or set()
+        self.author_blacklist: set[str] = author_blacklist or set()
+        self.url_blacklist: set[str] = url_blacklist or set()
         self.with_metadata: bool = (
             with_metadata
             or only_with_metadata
             or bool(url_blacklist)
             or output_format == "xmltei"
         )
-        self.date_params: Dict[str, Any] = date_params or set_date_params(
+        self.date_params: dict[str, Any] = date_params or set_date_params(
             self.config.getboolean("DEFAULT", "EXTENSIVE_DATE_SEARCH")
         )
-        self.max_tree_size = None
 
-    def _set_source(self, url: Optional[str], source: Optional[str]) -> None:
-        "Set the source attribute in a robust way."
-        source = url or source
-        self.source = source and source.encode("utf-8", "replace").decode("utf-8")
-
-    def _set_format(self, chosen_format: str) -> None:
-        "Store the format if supported and raise an error otherwise."
-        if chosen_format not in SUPPORTED_FORMATS:
-            raise AttributeError(
-                f"Cannot set format, must be one of: {', '.join(sorted(SUPPORTED_FORMATS))}"
-            )
-        self.format = chosen_format
-
-    def _add_config(self, config: ConfigParser) -> None:
+    def _populate_from_config(self, config: ConfigParser) -> None:
         "Store options loaded from config file."
         for key, value in CONFIG_MAPPING.items():
-            setattr(self, key, config.getint("DEFAULT", value))
-        self.config = config
+            if getattr(self, key) == VALUE_NOT_SET:
+                setattr(self, key, config.getint("DEFAULT", value))
 
 
-def args_to_extractor(args: Any, url: Optional[str] = None) -> Extractor:
+def _validate_format(chosen_format: str) -> str:
+    "Store the format if supported and raise an error otherwise."
+    if chosen_format not in SUPPORTED_FORMATS:
+        raise AttributeError(
+            f"Cannot set format, must be one of: {', '.join(sorted(SUPPORTED_FORMATS))}"
+        )
+    return chosen_format
+
+
+def _choose_url_or_source(url: str | None, source: str | None) -> str | None:
+    "Set the source attribute in a robust way."
+    source = url or source
+    if source is None:
+        return None
+    return source.encode("utf-8", "replace").decode("utf-8")
+
+
+def args_to_extractor(args: Any, url: Optional[str] = None) -> ExtractOptions:
     "Derive extractor configuration from CLI args."
-    options = Extractor(
+    options = ExtractOptions(
         config=use_config(filename=args.config_file),
         output_format=args.output_format,
         formatting=args.formatting,
@@ -197,7 +223,7 @@ def args_to_extractor(args: Any, url: Optional[str] = None) -> Extractor:
     return options
 
 
-def set_date_params(extensive: bool = True) -> Dict[str, Any]:
+def set_date_params(extensive: bool = True) -> dict[str, Any]:
     "Provide default parameters for date extraction."
     return {
         "original_date": True,

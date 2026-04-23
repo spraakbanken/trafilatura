@@ -6,10 +6,9 @@ Unit tests for the trafilatura's text hashing and cache.
 from lxml import etree, html
 
 import trafilatura.deduplication
-
 from trafilatura import extract
 from trafilatura.cli_utils import generate_hash_filename
-from trafilatura.core import Extractor
+from trafilatura.core import ExtractOptions
 from trafilatura.deduplication import (
     LRUCache,
     Simhash,
@@ -17,8 +16,7 @@ from trafilatura.deduplication import (
     duplicate_test,
 )
 
-
-DEFAULT_OPTIONS = Extractor()
+DEFAULT_OPTIONS = ExtractOptions()
 
 
 def test_hashes():

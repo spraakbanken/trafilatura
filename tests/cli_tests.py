@@ -116,7 +116,7 @@ def test_parser():
     with pytest.raises(SystemExit) as e, redirect_stdout(f):
         with patch.object(sys, "argv", testargs):
             args = cli.parse_args(testargs)
-    assert e.type == SystemExit
+    assert e.type == SystemExit  # noqa: E721
     assert e.value.code == 0
     assert re.match(
         r"Trafilatura [0-9]\.[0-9]+\.[0-9] - Python [0-9]\.[0-9]+\.[0-9]", f.getvalue()
@@ -286,7 +286,7 @@ def test_download():
         args = cli.parse_args(testargs)
     with pytest.raises(SystemExit) as e:
         cli.process_args(args)
-    assert e.type == SystemExit and e.value.code == 126
+    assert e.type == SystemExit and e.value.code == 126  # noqa: E721
 
 
 # @patch('trafilatura.settings.MAX_FILES_PER_DIRECTORY', 1)
