@@ -3,7 +3,6 @@ import os
 
 from evaldata import EVAL_PAGES
 
-
 # check if all entries have a corresponding html
 print("MISSING HTMLS")
 for k, v in EVAL_PAGES.items():
@@ -35,9 +34,9 @@ print("\nMISSING ENTRIES")
 def check_for_html_in_evaldata(htmldir):
     files = os.listdir(htmldir)
     print("\n", htmldir, len(files))
-    for f in files:
-        if not f in filenames:
-            print(f)
+    for file in files:
+        if file not in filenames:
+            print(file)
 
 
 check_for_html_in_evaldata("eval/")

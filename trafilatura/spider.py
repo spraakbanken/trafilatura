@@ -4,7 +4,7 @@ Functions dedicated to website navigation and crawling/spidering.
 """
 
 import logging
-
+import typing as t
 from configparser import ConfigParser
 from time import sleep
 from typing import List, Optional, Tuple
@@ -20,7 +20,7 @@ from courlan import (
 )
 
 try:
-    import py3langid  # type: ignore
+    import py3langid
 except ImportError:
     pass
 
@@ -30,7 +30,6 @@ from .core import baseline, prune_unwanted_nodes
 from .downloads import Response, fetch_response, fetch_url
 from .settings import DEFAULT_CONFIG
 from .utils import LANGID_FLAG, decode_file, load_html
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -71,7 +70,7 @@ class CrawlParameters:
         self.i: int = 0
         self.known_num: int = 0
         self.is_on: bool = True
-        self.prune_xpath: Optional[str] = prune_xpath
+        self.prune_xpath: Optional[t.Union[str, list[str]]] = prune_xpath
 
     def _get_base_url(self, start: str) -> str:
         "Set reference domain for the crawl."
@@ -217,7 +216,7 @@ def process_links(
 
     if htmlstring and params.prune_xpath is not None:
         if isinstance(params.prune_xpath, str):
-            params.prune_xpath = [params.prune_xpath]  # type: ignore[assignment]
+            params.prune_xpath = [params.prune_xpath]
         tree = load_html(htmlstring)
         if tree is not None:
             tree = prune_unwanted_nodes(tree, [XPath(x) for x in params.prune_xpath])

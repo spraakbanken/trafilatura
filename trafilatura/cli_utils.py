@@ -15,14 +15,13 @@ import re
 import string
 import sys
 import traceback
-
 from base64 import urlsafe_b64encode
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 from datetime import datetime
 from functools import partial
 from os import makedirs, path, stat, walk
 from threading import RLock
-from typing import Any, Generator, Optional, List, Set, Tuple
+from typing import Any, Generator, List, Optional, Set, Tuple
 
 from courlan import UrlStore, extract_domain, get_base_url  # validate_url
 
@@ -41,9 +40,9 @@ from .downloads import (
 from .feeds import find_feed_urls
 from .meta import reset_caches
 from .settings import (
-    Extractor,
     FILENAME_LEN,
     MAX_FILES_PER_DIRECTORY,
+    ExtractOptions,
     args_to_extractor,
 )
 from .sitemaps import sitemap_search
@@ -54,7 +53,6 @@ from .utils import (
     language_classifier,
     make_chunks,
 )
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -229,7 +227,10 @@ def generate_filelist(inputdir: str) -> Generator[str, None, None]:
 
 
 def file_processing(
-    filename: str, args: Any, counter: int = -1, options: Optional[Extractor] = None
+    filename: str,
+    args: Any,
+    counter: int = -1,
+    options: Optional[ExtractOptions] = None,
 ) -> None:
     "Aggregated functions to process a file in a list."
     if not options:
@@ -250,7 +251,7 @@ def file_processing(
 
 
 def process_result(
-    htmlstring: str, args: Any, counter: int, options: Optional[Extractor]
+    htmlstring: str, args: Any, counter: int, options: Optional[ExtractOptions]
 ) -> int:
     "Extract text and metadata from a download webpage and eventually write out the result."
     # backup option
@@ -267,7 +268,7 @@ def process_result(
 
 
 def download_queue_processing(
-    url_store: UrlStore, args: Any, counter: int, options: Extractor
+    url_store: UrlStore, args: Any, counter: int, options: ExtractOptions
 ) -> Tuple[List[str], int]:
     "Implement a download queue consumer, single- or multi-threaded."
     errors = []
@@ -353,7 +354,7 @@ def cli_crawler(
     args: Any,
     n: int = 30,
     url_store: Optional[UrlStore] = None,
-    options: Optional[Extractor] = None,
+    options: Optional[ExtractOptions] = None,
 ) -> None:
     """Start a focused crawler which downloads a fixed number of URLs within a website
     and prints the links found in the process."""
@@ -407,7 +408,7 @@ def probe_homepage(args: Any) -> None:
             result = html2txt(result)
             if (
                 result
-                and len(result) > options.min_extracted_size  # type: ignore[attr-defined]
+                and len(result) > options.min_extracted_size
                 and any(c.isalpha() for c in result)
             ):
                 if (
@@ -489,7 +490,7 @@ def examine(
     htmlstring: Optional[Any],
     args: Any,
     url: Optional[str] = None,
-    options: Optional[Extractor] = None,
+    options: Optional[ExtractOptions] = None,
 ) -> Optional[str]:
     "Generic safeguards and triggers around extraction function."
     result = None

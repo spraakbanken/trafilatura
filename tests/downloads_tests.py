@@ -35,7 +35,7 @@ from courlan import UrlStore
 import trafilatura.downloads
 from trafilatura.cli import parse_args
 from trafilatura.cli_utils import download_queue_processing, url_processing_pipeline
-from trafilatura.core import Extractor, extract
+from trafilatura.core import ExtractOptions, extract
 from trafilatura.downloads import (
     DEFAULT_HEADERS,
     HAS_PYCURL,
@@ -65,7 +65,7 @@ ZERO_CONFIG["DEFAULT"]["MIN_EXTRACTED_SIZE"] = "0"
 RESOURCES_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), "resources")
 UA_CONFIG = use_config(filename=os.path.join(RESOURCES_DIR, "newsettings.cfg"))
 
-DEFAULT_OPTS = Extractor(config=DEFAULT_CONFIG)
+DEFAULT_OPTS = ExtractOptions(config=DEFAULT_CONFIG)
 
 
 def _reset_downloads_global_objects():

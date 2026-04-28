@@ -30,7 +30,7 @@ from unicodedata import normalize
 
 # response compression
 try:
-    import brotli  # type: ignore
+    import brotli
 
     HAS_BROTLI = True
 except ImportError:
@@ -50,7 +50,7 @@ else:
 
 # language detection
 try:
-    import py3langid  # type: ignore
+    import py3langid
 
     LANGID_FLAG = True
 except ImportError:
@@ -58,9 +58,10 @@ except ImportError:
 
 # CChardet is faster and can be more accurate
 try:
-    from cchardet import detect as cchardet_detect  # type: ignore
+    from cchardet import detect as cchardet_detect
 except ImportError:
-    cchardet_detect = None
+    cchardet_detect = None  # ty: ignore[invalid-assignment]
+
 
 from charset_normalizer import from_bytes
 from lxml.etree import _Element
@@ -134,7 +135,7 @@ def handle_compressed_file(filecontent: bytes) -> bytes:
     # try brotli
     if HAS_BROTLI:
         try:
-            return brotli.decompress(filecontent)  # type: ignore[no-any-return]
+            return brotli.decompress(filecontent)
         except brotli.error:
             pass  # logging.debug('invalid Brotli file')
     # try zlib/deflate
@@ -321,7 +322,7 @@ def line_processing(
         new_line = trim(LINES_TRIMMING.sub(r" ", new_line))
         # prune empty lines
         if all(map(str.isspace, new_line)):
-            new_line = None  # type: ignore[assignment]
+            new_line = None
         elif trailing_space:
             space_before = " " if line[0].isspace() else ""
             space_after = " " if line[-1].isspace() else ""
@@ -340,7 +341,8 @@ def sanitize(
     try:
         return "\n".join(
             filter(
-                None, (line_processing(l, preserve_space) for l in text.splitlines())
+                None,
+                (line_processing(line, preserve_space) for line in text.splitlines()),
             )
         ).replace("\u2424", "")
     except AttributeError:
@@ -474,7 +476,7 @@ def language_classifier(temp_text: str, temp_comments: str) -> Optional[str]:
     else:  # pragma: no cover
         LOGGER.warning("Language detector not installed, skipping detection")
         result = None
-    return result  # type: ignore[no-any-return]
+    return result
 
 
 def language_filter(
@@ -503,7 +505,7 @@ def textfilter(element: _Element) -> bool:
     return (
         not testtext
         or testtext.isspace()
-        or any(map(RE_FILTER.match, testtext.splitlines()))
+        or any(map(RE_FILTER.match, testtext.splitlines()))  # ty: ignore[invalid-argument-type]
     )
 
 
@@ -511,7 +513,7 @@ def text_chars_test(string: Optional[str]) -> bool:
     """Determine if a string is only composed of spaces and/or control characters"""
     # or not re.search(r'\w', string)
     # return string is not None and len(string) != 0 and not string.isspace()
-    return bool(string) and not string.isspace()  # type: ignore[union-attr]
+    return bool(string) and not string.isspace()
 
 
 def copy_attributes(dest_elem: _Element, src_elem: _Element) -> None:
@@ -539,11 +541,11 @@ def is_last_element_in_cell(elem: _Element) -> bool:
         return False
 
     if elem.tag == "cell":
-        children = elem.getchildren()
+        children = list(elem)
         return not children or children[-1] == elem
     else:
         parent = cast(_Element, elem.getparent())
-        children = parent.getchildren()
+        children = list(parent)
         return not children or children[-1] == elem
 
 
@@ -584,7 +586,7 @@ def is_last_element_in_item(element: _Element) -> bool:
 
     # pure text only in list item
     if element.tag == "item":
-        return len(element.getchildren()) == 0
+        return len(list(element)) == 0
     # element within list item
     next_element = element.getnext()
     if next_element is None:

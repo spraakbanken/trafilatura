@@ -8,12 +8,12 @@ from lxml.etree import Element, SubElement, XMLParser, fromstring, tostring
 
 from trafilatura.metadata import Document
 from trafilatura.xml import (
-    check_tei,
-    replace_element_text,
-    write_fullheader,
     _handle_unwanted_tails,
     _move_element_one_level_up,
     _wrap_unwanted_siblings_of_div,
+    check_tei,
+    replace_element_text,
+    write_fullheader,
 )
 
 
@@ -54,7 +54,7 @@ def test_publisher_added_before_availability_in_publicationStmt():
     metadata.categories = metadata.tags = ["cat"]
     header = write_fullheader(teidoc, metadata)
     publicationstmt = header.find(".//{*}fileDesc/{*}publicationStmt")
-    assert [child.tag for child in publicationstmt.getchildren()] == [
+    assert [child.tag for child in publicationstmt] == [
         "publisher",
         "availability",
     ]
@@ -67,7 +67,7 @@ def test_publisher_added_before_availability_in_publicationStmt():
     metadata.categories = metadata.tags = ["cat"]
     header = write_fullheader(teidoc, metadata)
     publicationstmt = header.find(".//{*}fileDesc/{*}publicationStmt")
-    assert [child.tag for child in publicationstmt.getchildren()] == [
+    assert [child.tag for child in publicationstmt] == [
         "publisher",
         "availability",
     ]
@@ -81,7 +81,7 @@ def test_publisher_added_before_availability_in_publicationStmt():
     metadata.categories = metadata.tags = ["cat"]
     header = write_fullheader(teidoc, metadata)
     publicationstmt = header.find(".//{*}fileDesc/{*}publicationStmt")
-    assert [child.tag for child in publicationstmt.getchildren()] == [
+    assert [child.tag for child in publicationstmt] == [
         "publisher",
         "availability",
     ]
@@ -93,7 +93,7 @@ def test_publisher_added_before_availability_in_publicationStmt():
     metadata.license = "CC BY-SA 4.0"
     header = write_fullheader(teidoc, metadata)
     publicationstmt = header.find(".//{*}fileDesc/{*}publicationStmt")
-    assert [child.tag for child in publicationstmt.getchildren()] == [
+    assert [child.tag for child in publicationstmt] == [
         "publisher",
         "availability",
     ]
@@ -104,7 +104,7 @@ def test_publisher_added_before_availability_in_publicationStmt():
     metadata.categories = metadata.tags = ["cat"]
     header = write_fullheader(teidoc, metadata)
     publicationstmt = header.find(".//{*}fileDesc/{*}publicationStmt")
-    assert [child.tag for child in publicationstmt.getchildren()] == ["p"]
+    assert [child.tag for child in publicationstmt] == ["p"]
 
 
 def test_unwanted_siblings_of_div_removed():

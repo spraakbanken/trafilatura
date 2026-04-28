@@ -79,7 +79,7 @@ all = [
   "py3langid >= 0.3.0",
   "pycurl >= 7.45.3",
   "urllib3[socks]",
-  "backports.zstd>=1.0.0; python_version<'3.14'"
+  "backports-zstd>=1.0.0; python_version<'3.14'"
 ]
 
 [dependency-groups]

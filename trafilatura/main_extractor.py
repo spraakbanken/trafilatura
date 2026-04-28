@@ -5,15 +5,14 @@ Functions related to the main Trafilatura extractor.
 
 import logging
 import re  # import regex as re
-
 from copy import deepcopy
-from typing import Any, Optional, Tuple, Set, Union
+from typing import Any, Optional, Set, Tuple, Union
 from urllib.parse import urljoin
 
 from lxml.etree import (
-    _Element,
     Element,
     SubElement,
+    _Element,
     strip_elements,
     strip_tags,
     tostring,
@@ -28,7 +27,7 @@ from .htmlprocessing import (
     process_node,
     prune_unwanted_nodes,
 )
-from .settings import TAG_CATALOG, Extractor
+from .settings import TAG_CATALOG, ExtractOptions
 from .utils import (
     FORMATTING_PROTECTED,
     copy_attributes,
@@ -47,7 +46,6 @@ from .xpaths import (
     TEASER_DISCARD_XPATH,
 )
 
-
 LOGGER = logging.getLogger(__name__)
 
 
@@ -64,7 +62,7 @@ def _log_event(msg: str, tag: Any, text: Optional[Union[bytes, str]]) -> None:
     LOGGER.debug("%s: %s %s", msg, tag, trim(text or "") or "None")
 
 
-def handle_titles(element: _Element, options: Extractor) -> Optional[_Element]:
+def handle_titles(element: _Element, options: ExtractOptions) -> Optional[_Element]:
     """Process head elements (titles)"""
     if len(element) == 0:
         # maybe needs attention?
@@ -90,7 +88,7 @@ def handle_titles(element: _Element, options: Extractor) -> Optional[_Element]:
     return None
 
 
-def handle_formatting(element: _Element, options: Extractor) -> Optional[_Element]:
+def handle_formatting(element: _Element, options: ExtractOptions) -> Optional[_Element]:
     """Process formatting elements (b, i, etc. converted to hi) found
     outside of paragraphs"""
     formatting = process_node(element, options)
@@ -154,7 +152,7 @@ def add_sub_element(
 
 
 def process_nested_elements(
-    child: _Element, new_child_elem: _Element, options: Extractor
+    child: _Element, new_child_elem: _Element, options: ExtractOptions
 ) -> None:
     "Iterate through an element child and rewire its descendants."
     new_child_elem.text = child.text
@@ -183,7 +181,7 @@ def is_text_element(elem: _Element) -> bool:
 
 
 def define_newelem(
-    processed_elem: _Element, orig_elem: _Element, options: Extractor
+    processed_elem: _Element, orig_elem: _Element, options: ExtractOptions
 ) -> None:
     "Create a new sub-element if necessary."
     if processed_elem is not None:
@@ -208,7 +206,7 @@ def define_newelem(
             copy_attributes(childelem, processed_elem)
 
 
-def handle_lists(element: _Element, options: Extractor) -> Optional[_Element]:
+def handle_lists(element: _Element, options: ExtractOptions) -> Optional[_Element]:
     "Process lists elements including their descendants."
     processed_element = Element(element.tag)
 
@@ -225,7 +223,7 @@ def handle_lists(element: _Element, options: Extractor) -> Optional[_Element]:
             if processed_child is not None:
                 new_child_elem.text = processed_child.text or ""
                 if processed_child.tail and processed_child.tail.strip():
-                    new_child_elem.text += " " + processed_child.tail
+                    new_child_elem.text += " " + processed_child.tail  # ty: ignore[unsupported-operator]
                 processed_element.append(new_child_elem)
         else:
             process_nested_elements(child, new_child_elem, options)
@@ -276,7 +274,7 @@ def handle_code_blocks(element: _Element) -> _Element:
     return processed_element
 
 
-def handle_quotes(element: _Element, options: Extractor) -> Optional[_Element]:
+def handle_quotes(element: _Element, options: ExtractOptions) -> Optional[_Element]:
     "Process quotes elements."
     if is_code_block_element(element):
         return handle_code_blocks(element)
@@ -297,7 +295,7 @@ def handle_quotes(element: _Element, options: Extractor) -> Optional[_Element]:
 
 
 def handle_other_elements(
-    element: _Element, potential_tags: Set[str], options: Extractor
+    element: _Element, potential_tags: Set[str], options: ExtractOptions
 ) -> Optional[_Element]:
     "Handle diverse or unknown elements in the scope of relevant tags."
     # handle w3schools code
@@ -331,7 +329,7 @@ def handle_other_elements(
 
 
 def handle_paragraphs(
-    element: _Element, potential_tags: Set[str], options: Extractor
+    element: _Element, potential_tags: Set[str], options: ExtractOptions
 ) -> Optional[_Element]:
     "Process paragraphs along with their children, trim and clean the content."
     element.attrib.clear()  # todo: test if necessary
@@ -369,8 +367,8 @@ def handle_paragraphs(
                 if len(processed_child) > 0:
                     for item in processed_child:  # children are lists
                         if text_chars_test(item.text) is True:
-                            item.text = " " + item.text  # type: ignore[operator]
-                        strip_tags(processed_child, item.tag)
+                            item.text = " " + item.text  # ty: ignore[unsupported-operator]
+                        strip_tags(processed_child, item.tag)  # ty:ignore[no-matching-overload]
                 # correct attributes
                 if child.tag == "hi":
                     newsub.set("rend", child.get("rend", ""))
@@ -426,7 +424,7 @@ def define_cell_type(is_header: bool) -> _Element:
 
 
 def handle_table(
-    table_elem: _Element, potential_tags: Set[str], options: Extractor
+    table_elem: _Element, potential_tags: Set[str], options: ExtractOptions
 ) -> Optional[_Element]:
     "Process single table element."
     newtable = Element("table")
@@ -530,7 +528,7 @@ def handle_table(
 
 
 def handle_image(
-    element: Optional[_Element], options: Optional[Extractor] = None
+    element: Optional[_Element], options: Optional[ExtractOptions] = None
 ) -> Optional[_Element]:
     "Process image elements and their relevant attributes."
     if element is None:
@@ -574,7 +572,7 @@ def handle_image(
 
 
 def handle_textelem(
-    element: _Element, potential_tags: Set[str], options: Extractor
+    element: _Element, potential_tags: Set[str], options: ExtractOptions
 ) -> Optional[_Element]:
     """Process text element and determine how to deal with its content"""
     new_element = None
@@ -610,7 +608,7 @@ def handle_textelem(
 def recover_wild_text(
     tree: HtmlElement,
     result_body: _Element,
-    options: Extractor,
+    options: ExtractOptions,
     potential_tags: Any = TAG_CATALOG,
 ) -> _Element:
     """Look for all previously unconsidered wild elements, including outside of the determined
@@ -630,7 +628,7 @@ def recover_wild_text(
     subelems = search_tree.xpath(search_expr)
     result_body.extend(
         filter(
-            lambda x: x is not None,  # type: ignore[arg-type]
+            lambda x: x is not None,
             (handle_textelem(e, potential_tags, options) for e in subelems),
         )
     )
@@ -638,7 +636,7 @@ def recover_wild_text(
 
 
 def prune_unwanted_sections(
-    tree: HtmlElement, potential_tags: Set[str], options: Extractor
+    tree: HtmlElement, potential_tags: Set[str], options: ExtractOptions
 ) -> HtmlElement:
     "Rule-based deletion of targeted document sections"
     favor_precision = options.focus == "precision"
@@ -683,7 +681,9 @@ def prune_unwanted_sections(
     return tree
 
 
-def _extract(tree: HtmlElement, options: Extractor) -> Tuple[_Element, str, Set[str]]:
+def _extract(
+    tree: HtmlElement, options: ExtractOptions
+) -> Tuple[_Element, str, Set[str]]:
     # init
     potential_tags = set(TAG_CATALOG)
     if options.tables is True:
@@ -710,7 +710,7 @@ def _extract(tree: HtmlElement, options: Extractor) -> Tuple[_Element, str, Set[
             factor = 1
         else:
             factor = 3
-        if not ptest or len("".join(ptest)) < options.min_extracted_size * factor:  # type: ignore[attr-defined]
+        if not ptest or len("".join(ptest)) < options.min_extracted_size * factor:
             potential_tags.add("div")
         # polish list of potential tags
         if "ref" not in potential_tags:
@@ -745,7 +745,7 @@ def _extract(tree: HtmlElement, options: Extractor) -> Tuple[_Element, str, Set[
 
 
 def extract_content(
-    cleaned_tree: HtmlElement, options: Extractor
+    cleaned_tree: HtmlElement, options: ExtractOptions
 ) -> Tuple[_Element, str, int]:
     """Find the main content of a page using a set of XPath expressions,
     then extract relevant elements, strip them of unwanted subparts and
@@ -759,7 +759,7 @@ def extract_content(
 
     # try parsing wild <p> elements if nothing found or text too short
     # todo: test precision and recall settings here
-    if len(result_body) == 0 or len(temp_text) < options.min_extracted_size:  # type: ignore[attr-defined]
+    if len(result_body) == 0 or len(temp_text) < options.min_extracted_size:
         result_body = recover_wild_text(
             backup_tree, result_body, options, potential_tags
         )
@@ -772,7 +772,7 @@ def extract_content(
 
 
 def process_comments_node(
-    elem: _Element, potential_tags: Set[str], options: Extractor
+    elem: _Element, potential_tags: Set[str], options: ExtractOptions
 ) -> Optional[_Element]:
     """Process comment node and determine how to deal with its content"""
     if elem.tag in potential_tags:
@@ -790,7 +790,7 @@ def process_comments_node(
 
 
 def extract_comments(
-    tree: HtmlElement, options: Extractor
+    tree: HtmlElement, options: ExtractOptions
 ) -> Tuple[_Element, str, int, HtmlElement]:
     "Try to extract comments out of potential sections in the HTML."
     comments_body = Element("body")
@@ -821,7 +821,7 @@ def extract_comments(
                     for e in subtree.xpath(".//*")
                 ),
             )
-        )  # type: ignore[arg-type]
+        )
         # control
         if len(comments_body) > 0:  # if it has children
             LOGGER.debug(expr)

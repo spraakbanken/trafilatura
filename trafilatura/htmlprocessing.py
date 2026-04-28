@@ -4,25 +4,23 @@ Functions to process nodes in HTML code.
 """
 
 import logging
-
 from copy import deepcopy
 from typing import List, Optional, Tuple
 
 from courlan.urlutils import fix_relative_urls, get_base_url
-from lxml.etree import _Element, Element, SubElement, XPath, strip_tags, tostring
+from lxml.etree import Element, SubElement, XPath, _Element, strip_tags, tostring
 from lxml.html import HtmlElement
 
 from .deduplication import duplicate_test
 from .settings import (
-    Document,
-    Extractor,
     CUT_EMPTY_ELEMS,
     MANUALLY_CLEANED,
     MANUALLY_STRIPPED,
+    Document,
+    ExtractOptions,
 )
-from .utils import textfilter, trim, is_image_element
+from .utils import is_image_element, textfilter, trim
 from .xml import META_ATTRIBUTES, delete_element
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -47,7 +45,7 @@ PRESERVE_IMG_CLEANING = {"figure", "picture", "source"}
 CODE_INDICATORS = ["{", '("', "('", "\n    "]
 
 
-def tree_cleaning(tree: HtmlElement, options: Extractor) -> HtmlElement:
+def tree_cleaning(tree: HtmlElement, options: ExtractOptions) -> HtmlElement:
     "Prune the tree by discarding unwanted elements."
     # determine cleaning strategy, use lists to keep it deterministic
     cleaning_list, stripping_list = MANUALLY_CLEANED.copy(), MANUALLY_STRIPPED.copy()
@@ -121,7 +119,7 @@ def collect_link_info(
     mylist = [e for e in (trim(elem.text_content()) for elem in links_xpath) if e]
     lengths = list(map(len, mylist))
     # longer strings impact recall in favor of precision
-    shortelems = sum(1 for l in lengths if l < 10)
+    shortelems = sum(1 for length in lengths if length < 10)
     return sum(lengths), len(mylist), shortelems, mylist
 
 
@@ -217,7 +215,7 @@ def delete_by_link_density(
 
 def handle_textnode(
     elem: _Element,
-    options: Extractor,
+    options: ExtractOptions,
     comments_fix: bool = True,
     preserve_spaces: bool = False,
 ) -> Optional[_Element]:
@@ -261,7 +259,7 @@ def handle_textnode(
     return elem
 
 
-def process_node(elem: _Element, options: Extractor) -> Optional[_Element]:
+def process_node(elem: _Element, options: ExtractOptions) -> Optional[_Element]:
     "Convert, format, and probe potential text elements (light format)."
     if elem.tag == "done" or (len(elem) == 0 and not elem.text and not elem.tail):
         return None
@@ -387,7 +385,7 @@ def convert_link(elem: HtmlElement, base_url: Optional[str]) -> None:
 
 
 def convert_tags(
-    tree: HtmlElement, options: Extractor, url: Optional[str] = None
+    tree: HtmlElement, options: ExtractOptions, url: Optional[str] = None
 ) -> HtmlElement:
     "Simplify markup and convert relevant HTML tags to an XML standard."
     # delete links for faster processing
@@ -409,14 +407,14 @@ def convert_tags(
     if options.formatting:
         for elem in tree.iter(REND_TAG_MAPPING.keys()):
             elem.attrib.clear()
-            elem.set("rend", REND_TAG_MAPPING[elem.tag])  # type: ignore[index]
+            elem.set("rend", REND_TAG_MAPPING[elem.tag])  # ty: ignore[invalid-argument-type]
             elem.tag = "hi"
     else:
         strip_tags(tree, *REND_TAG_MAPPING.keys())
 
     # iterate over all concerned elements
     for elem in tree.iter(CONVERSIONS.keys()):
-        CONVERSIONS[elem.tag](elem)  # type: ignore[index]
+        CONVERSIONS[elem.tag](elem)  # ty: ignore[invalid-argument-type]
     # images
     if options.images:
         for elem in tree.iter("img"):
@@ -444,9 +442,9 @@ def convert_to_html(tree: _Element) -> _Element:
         conversion = HTML_CONVERSIONS[str(elem.tag)]
         # apply function or straight conversion
         if callable(conversion):
-            elem.tag = conversion(elem)
+            elem.tag = conversion(elem)  # ty: ignore[call-top-callable]
         else:
-            elem.tag = conversion  # type: ignore[assignment]
+            elem.tag = conversion
         # handle attributes
         if elem.tag == "a":
             elem.set("href", elem.attrib.pop("target", ""))

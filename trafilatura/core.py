@@ -5,11 +5,10 @@ Extraction configuration and processing functions.
 
 import logging
 import warnings
-
 from copy import copy, deepcopy
 from typing import Any, Dict, Optional, Set, Tuple, Union
 
-from lxml.etree import _Element, Element, XPath, strip_tags
+from lxml.etree import Element, XPath, _Element, strip_tags
 from lxml.html import HtmlElement
 
 # own
@@ -24,7 +23,7 @@ from .htmlprocessing import (
 )
 from .main_extractor import extract_comments, extract_content
 from .metadata import Document, extract_metadata
-from .settings import DEFAULT_CONFIG, Extractor, use_config
+from .settings import DEFAULT_CONFIG, VALUE_NOT_SET, ExtractOptions, use_config
 from .utils import (
     LANGID_FLAG,
     check_html_lang,
@@ -32,16 +31,15 @@ from .utils import (
     load_html,
     normalize_unicode,
 )
-from .xml import build_json_output, control_xml_output, xmltotxt, xmltocsv
+from .xml import build_json_output, control_xml_output, xmltocsv, xmltotxt
 from .xpaths import REMOVE_COMMENTS_XPATH
-
 
 LOGGER = logging.getLogger(__name__)
 
 TXT_FORMATS = {"markdown", "txt"}
 
 
-def determine_returnstring(document: Document, options: Extractor) -> str:
+def determine_returnstring(document: Document, options: ExtractOptions) -> str:
     """Convert XML tree to chosen format, clean the result and output it as a string"""
     # XML (TEI) steps
     if "xml" in options.format:
@@ -102,7 +100,7 @@ def trafilatura_sequence(
     cleaned_tree: HtmlElement,
     cleaned_tree_backup: HtmlElement,
     tree_backup: HtmlElement,
-    options: Extractor,
+    options: ExtractOptions,
 ) -> Tuple[_Element, str, int]:
     "Execute the standard cascade of extractors used by Trafilatura."
     # Trafilatura's main extractor
@@ -120,7 +118,7 @@ def trafilatura_sequence(
         )
 
     # rescue: baseline extraction on original/dirty tree
-    if len_text < options.min_extracted_size and not options.focus == "precision":  # type: ignore[attr-defined]
+    if len_text < options.min_extracted_size and not options.focus == "precision":
         postbody, temp_text, len_text = baseline(deepcopy(tree_backup))
         LOGGER.debug("non-clean extracted length: %s (extraction)", len_text)
 
@@ -150,8 +148,9 @@ def bare_extraction(
     author_blacklist: Optional[Set[str]] = None,
     as_dict: bool = False,
     prune_xpath: Optional[Any] = None,
+    min_extracted_size: int = VALUE_NOT_SET,
     config: Any = DEFAULT_CONFIG,
-    options: Optional[Extractor] = None,
+    options: Optional[ExtractOptions] = None,
 ) -> Optional[Union[Document, Dict[str, Any]]]:
     """Internal function for text extraction returning bare Python variables.
 
@@ -199,8 +198,8 @@ def bare_extraction(
     fast = fast or no_fallback
 
     # regroup extraction options
-    if not options or not isinstance(options, Extractor):
-        options = Extractor(
+    if not options or not isinstance(options, ExtractOptions):
+        options = ExtractOptions(
             config=config,
             output_format=output_format,
             fast=fast,
@@ -219,6 +218,7 @@ def bare_extraction(
             author_blacklist=author_blacklist,
             url_blacklist=url_blacklist,
             date_params=date_extraction_params,
+            min_extracted_size=min_extracted_size,
         )
 
     try:
@@ -302,11 +302,11 @@ def bare_extraction(
                 )
                 raise ValueError
         # size checks
-        if options.comments and len_comments < options.min_extracted_comm_size:  # type: ignore[attr-defined]
+        if options.comments and len_comments < options.min_extracted_comm_size:
             LOGGER.debug("not enough comments: %s", options.source)
         if (
-            len_text < options.min_output_size  # type: ignore[attr-defined]
-            and len_comments < options.min_output_comm_size  # type: ignore[attr-defined]
+            len_text < options.min_output_size
+            and len_comments < options.min_output_comm_size
         ):
             LOGGER.debug(
                 "text and comments not long enough: %s %s %s",
@@ -373,8 +373,9 @@ def extract(
     author_blacklist: Optional[Set[str]] = None,
     settingsfile: Optional[str] = None,
     prune_xpath: Optional[Any] = None,
+    min_extracted_size: int = VALUE_NOT_SET,
     config: Any = DEFAULT_CONFIG,
-    options: Optional[Extractor] = None,
+    options: Optional[ExtractOptions] = None,
 ) -> Optional[str]:
     """Main function exposed by the package:
        Wrapper for text extraction and conversion to chosen output format.
@@ -439,6 +440,7 @@ def extract(
         author_blacklist=author_blacklist,
         settingsfile=settingsfile,
         prune_xpath=prune_xpath,
+        min_extracted_size=min_extracted_size,
         config=config,
         options=options,
     )
@@ -466,8 +468,9 @@ def extract_with_metadata(
     author_blacklist: Optional[Set[str]] = None,
     settingsfile: Optional[str] = None,
     prune_xpath: Optional[Any] = None,
+    min_extracted_size: int = VALUE_NOT_SET,
     config: Any = DEFAULT_CONFIG,
-    options: Optional[Extractor] = None,
+    options: Optional[ExtractOptions] = None,
 ) -> Optional[Document]:
     """Main function exposed by the package:
        Wrapper for text extraction and conversion to chosen output format.
@@ -527,6 +530,7 @@ def extract_with_metadata(
         author_blacklist=author_blacklist,
         settingsfile=settingsfile,
         prune_xpath=prune_xpath,
+        min_extracted_size=min_extracted_size,
         config=config,
         options=options,
     )
@@ -577,8 +581,9 @@ def _internal_extraction(
     author_blacklist: Optional[Set[str]] = None,
     settingsfile: Optional[str] = None,
     prune_xpath: Optional[Any] = None,
+    min_extracted_size: int = VALUE_NOT_SET,
     config: Any = DEFAULT_CONFIG,
-    options: Optional[Extractor] = None,
+    options: Optional[ExtractOptions] = None,
 ) -> Optional[Document]:
     """Internal method to do the extraction"""
     _check_deprecation(
@@ -586,8 +591,8 @@ def _internal_extraction(
     )
 
     # regroup extraction options
-    if not options or not isinstance(options, Extractor):
-        options = Extractor(
+    if not options or not isinstance(options, ExtractOptions):
+        options = ExtractOptions(
             config=use_config(settingsfile, config),
             output_format=output_format,
             fast=fast,
@@ -607,6 +612,7 @@ def _internal_extraction(
             author_blacklist=author_blacklist,
             url_blacklist=url_blacklist,
             date_params=date_extraction_params,
+            min_extracted_size=min_extracted_size,
         )
 
     # extraction

@@ -4,7 +4,7 @@ Deduplication
 .. meta::
     :description lang=en:
         Duplicate content can harm data quality and efficiency. Trafilatura detects similar texts
-        and segments using a LRU cache and locality sensitive hashing (LSH). 
+        and segments using a LRU cache and locality sensitive hashing (LSH).
 
 
 
@@ -35,7 +35,7 @@ Extraction functions
 The functions ``extract()`` and ``bare_extraction()`` include a parameter to allow for removal of duplicate segments. This option is not activated by default and can be set using two different methods:
 
 - ``deduplicate = True``
-- ``options.dedup = True`` (see ``settings.Extractor``)
+- ``options.dedup = True`` (see ``settings.ExtractOptions``)
 
 
 
@@ -47,7 +47,7 @@ The ``duplicate_test()`` function checks for duplicate text content within an LX
 Parameters:
 
 - element: LXML element whose text content is to be checked for duplicates.
-- options (object): Extractor object containing configuration, must include:
+- options (object): ExtractOptions object containing configuration, must include:
 
   - ``min_duplcheck_size``: Minimum length of text content to be considered
   - ``max_repetitions``: Maximum number of repetitions allowed for the segment
@@ -61,9 +61,9 @@ This snippet sets up options to consider even short segments and not allow any r
 
     >>> from lxml.etree import fromstring
     >>> from trafilatura.deduplication import duplicate_test
-    >>> from trafilatura.settings import Extractor
+    >>> from trafilatura.settings import ExtractOptions
 
-    >>> options = Extractor()
+    >>> options = ExtractOptions()
     >>> options.min_duplcheck_size = 0  # even short segments are considered
     >>> options.max_repetitions = 0  # no repetition allowed
 
@@ -146,5 +146,5 @@ Configuration
 
 The deduplication process can be customized on two different levels:
 
-- Extraction options with ``Extractor()`` object: see example above
+- Extraction options with ``ExtractOptions()`` object: see example above
 - Package-wide settings in ``settings.py``: define cache size with ``LRU_SIZE`` variable
