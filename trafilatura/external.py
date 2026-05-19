@@ -4,6 +4,7 @@ Functions grounding on third-party software.
 """
 
 import logging
+import os
 from typing import Any, Tuple
 
 # third-party
@@ -13,21 +14,27 @@ from justext.core import (
     revise_paragraph_classification,
 )
 from justext.utils import get_stoplist, get_stoplists
-from lxml.etree import Element, _Element, strip_tags, tostring
+from lxml import html
+from lxml.etree import _Element, strip_tags, tostring
 from lxml.html import HtmlElement
 
 # own
 from .baseline import basic_cleaning
 from .htmlprocessing import convert_tags, prune_unwanted_nodes, tree_cleaning
 from .readability_lxml import Document as ReadabilityDocument  # fork
-from .settings import JUSTEXT_LANGUAGES
+from .settings import JUSTEXT_LANGUAGES, normalize_fallback_name
 from .utils import fromstring_bytes, trim
 from .xml import TEI_VALID_TAGS
 from .xpaths import OVERALL_DISCARD_XPATH
 
 LOGGER = logging.getLogger(__name__)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("transformers").setLevel(logging.ERROR)
 
 JT_STOPLIST = None
+MINERU_EXTRACTOR = None
+MINERU_IMPORT_ERROR = False
 
 SANITIZED_XPATH = ".//aside|.//audio|.//button|.//fieldset|.//figure|.//footer|.//iframe|.//input|.//label|.//link|.//nav|.//noindex|.//noscript|.//object|.//option|.//select|.//source|.//svg|.//time"
 
@@ -48,90 +55,243 @@ def try_readability(htmlinput: HtmlElement) -> HtmlElement:
 def compare_extraction(
     tree: HtmlElement,
     backup_tree: HtmlElement,
-    body: _Element,
+    body: HtmlElement,
     text: str,
     len_text: int,
     options: Any,
-) -> Tuple[_Element, str, int]:
-    """Decide whether to choose own or external extraction
-    based on a series of heuristics"""
+) -> Tuple[HtmlElement, str, int]:
+    """Decide whether to choose own or external extraction based on a series of heuristics"""
     # bypass for recall
     if options.focus == "recall" and len_text > options.min_extracted_size * 10:
         return body, text, len_text
 
-    use_readability, jt_result = False, False
+    # Check text density
+    text_density = _calculate_text_density(text, tree)
+    if text_density > 0.02:
+        LOGGER.debug("High text density (%s), skipping fallbacks", text_density)
+        return body, text, len_text
+
+    sanitize_output = False
     # prior cleaning
     if options.focus == "precision":
         backup_tree = prune_unwanted_nodes(backup_tree, OVERALL_DISCARD_XPATH)
 
-    # try with readability
-    temppost_algo = try_readability(backup_tree)
-    # unicode fix necessary on certain systems (#331)
+    used_fallback = None
+
+    for extractor in options.fallback_chain:
+        extractor = normalize_fallback_name(extractor)
+        LOGGER.debug("attempting fallback extractor: %s", extractor)
+
+        if extractor == "readability":
+            temppost_algo, algo_text, len_algo = readability_rescue(backup_tree)
+            LOGGER.debug("Comparing to fallback 'readability'. Fallback length: %s (original: %s)", len_algo, len_text)
+            if _should_use_html_fallback(body, len_text, temppost_algo, algo_text, len_algo, options):
+                used_fallback = "readability"
+                body, text, len_text = temppost_algo, algo_text, len_algo
+                sanitize_output = True
+                LOGGER.debug("using readability fallback: %s", options.source)
+                break
+
+        elif extractor == "justext":
+            LOGGER.debug("Considering fallback 'justext'")
+            if _should_try_plaintext_rescue(body, len_text, options):
+                LOGGER.debug("unclean document triggering justext examination: %s",options.source,)
+                body2, text2, len_text2 = justext_rescue(tree, options)
+                if _is_acceptable_plaintext_rescue(len_text, text2, len_text2):
+                    used_fallback = "justext"
+                    LOGGER.debug("Accepting justext fallback")
+                    body, text, len_text = body2, text2, len_text2
+                    sanitize_output = False
+
+        elif extractor == "mineru":
+            # Pass the original tree to mineru to give it the best chance
+            temppost_algo, algo_text, len_algo = mineru_rescue(tree, options)
+            LOGGER.debug("Comparing to fallback 'mineru'. Fallback length: %s (original: %s)", len_algo, len_text)
+            if _should_use_html_fallback(body, len_text, temppost_algo, algo_text, len_algo, options):
+                used_fallback = "mineru"
+                body, text, len_text = temppost_algo, algo_text, len_algo
+                sanitize_output = True
+                LOGGER.debug("using mineru fallback: %s", options.source)
+                break
+
+        else:
+            LOGGER.warning("unknown fallback extractor skipped: %s", extractor)
+
+    # post-processing: remove unwanted sections
+    if sanitize_output:
+        body, text, len_text = sanitize_tree(body, options)
+
+    if used_fallback is not None:
+        algo_text_density = _calculate_text_density(algo_text, tree)
+        LOGGER.debug("Fallback extractor used: %s (text density: %s)", used_fallback, algo_text_density)
+
+    return body, text, len_text
+
+
+def _calculate_text_density(text: str, tree: HtmlElement) -> float:
+    "Calculate text density as a heuristic for content quality."
+    html_string = html.tostring(tree, encoding="unicode")
+    return round(len(text) / len(html_string) if len(html_string) > 0 else 0.0, 3)
+
+
+def _should_use_html_fallback(
+    body: _Element,
+    len_text: int,
+    candidate_body: HtmlElement,
+    candidate_text: str,
+    candidate_len: int,
+    options: Any,
+) -> bool:
+    "Use the standard external extraction heuristics for HTML candidates."
+    if candidate_len in (0, len_text):
+        # Reject if output is empty or same length as original
+        LOGGER.debug("Rejecting fallback: empty or same length as original")
+        return False
+    if len_text == 0 and candidate_len > 0:
+        # Accept if original is empty and candidate is not
+        LOGGER.debug("Accepting fallback: original empty and candidate not empty")
+        return True
+    if len_text > 2 * candidate_len:
+        # Reject if original is much longer than candidate
+        LOGGER.debug("Rejecting fallback: original much longer than candidate")
+        return False
+    # quick fix for https://github.com/adbar/trafilatura/issues/632
+    if candidate_len > 2 * len_text and not candidate_text.startswith("{"):
+        # Accept if candidate is much longer than original and doesn't look like JSON
+        LOGGER.debug("Accepting fallback: candidate much longer than original and not JSON")
+        return True
+    if not body.xpath(".//p//text()") and candidate_len > options.min_extracted_size * 2:
+        # Accept if original has no paragraphs and candidate is reasonably long
+        LOGGER.debug("Accepting fallback: original has no paragraphs and candidate is reasonably long")
+        return True
+    if (
+        len(body.findall(".//table")) > len(body.findall(".//p"))
+        and candidate_len > options.min_extracted_size * 2
+    ):
+        # Accept if there are more tables than paragraphs and candidate is reasonably long
+        LOGGER.debug("Accepting fallback: more tables than paragraphs and candidate is reasonably long")
+        return True
+    # https://github.com/adbar/trafilatura/issues/354
+    if (
+        options.focus == "recall"
+        and not body.xpath(".//head")
+        and candidate_body.xpath(".//h2|.//h3|.//h4")
+        and candidate_len > len_text
+    ):
+        # Accept if focus is recall, original has no headings, candidate has subheadings, and candidate is longer
+        LOGGER.debug("Accepting fallback: focus is recall, original has no headings, candidate has subheadings, and candidate is longer")
+        return True
+    LOGGER.debug(
+        "Rejecting fallback: no heuristics passed (extraction values: %s %s for %s)",
+        len_text,
+        candidate_len,
+        options.source,
+    )
+    return False
+
+
+def _should_try_plaintext_rescue(body: _Element, len_text: int, options: Any) -> bool:
+    "Only run plain-text rescue methods when current output is short or noisy."
+    should_try = bool(body.xpath(SANITIZED_XPATH) or len_text < options.min_extracted_size)
+    if should_try:
+        LOGGER.debug("considering plaintext rescue: document is short or contains unwanted sections")
+    else:
+        LOGGER.debug("skipping plaintext rescue: document is sufficiently long and clean")
+    return should_try
+
+
+def _is_acceptable_plaintext_rescue(
+    len_text: int, candidate_text: str, candidate_len: int
+) -> bool:
+    "Prevent too short plain-text rescues from replacing the main text."
+    is_acceptable = bool(candidate_text) and not len_text > 4 * candidate_len
+    if is_acceptable:
+        LOGGER.debug("accepting plaintext rescue: candidate is reasonably long")
+    else:
+        LOGGER.debug("rejecting plaintext rescue: candidate is too short")
+    return is_acceptable
+
+
+def readability_rescue(tree: HtmlElement) -> Tuple[HtmlElement, str, int]:
+    "Extract content using readability."
+    temppost_algo = try_readability(tree)
     algo_text = trim(
         tostring(temppost_algo, method="text", encoding="utf-8").decode("utf-8")
     )
-    len_algo = len(algo_text)
+    return temppost_algo, algo_text, len(algo_text)
 
-    # compare
-    LOGGER.debug("extracted length: %s (algorithm) %s (extraction)", len_algo, len_text)
-    # conditions to use alternative algorithms
-    if len_algo in (0, len_text):
-        use_readability = False
-    elif len_text == 0 and len_algo > 0:
-        use_readability = True
-    elif len_text > 2 * len_algo:
-        use_readability = False
-    # quick fix for https://github.com/adbar/trafilatura/issues/632
-    elif len_algo > 2 * len_text and not algo_text.startswith("{"):
-        use_readability = True
-    # borderline cases
-    elif not body.xpath(".//p//text()") and len_algo > options.min_extracted_size * 2:
-        use_readability = True
-    elif (
-        len(body.findall(".//table")) > len(body.findall(".//p"))
-        and len_algo > options.min_extracted_size * 2
-    ):
-        use_readability = True
-    # https://github.com/adbar/trafilatura/issues/354
-    elif (
-        options.focus == "recall"
-        and not body.xpath(".//head")
-        and temppost_algo.xpath(".//h2|.//h3|.//h4")
-        and len_algo > len_text
-    ):
-        use_readability = True
-    else:
-        LOGGER.debug(
-            "extraction values: %s %s for %s", len_text, len_algo, options.source
+
+def _get_mineru_extractor() -> Any:
+    "Lazy-load the MinerU HTML extractor only when it is requested."
+    global MINERU_EXTRACTOR, MINERU_IMPORT_ERROR
+    if MINERU_EXTRACTOR is not None:
+        return MINERU_EXTRACTOR
+    if MINERU_IMPORT_ERROR:
+        return None
+
+    try:
+        from transformers.utils import logging as transformers_logging
+        transformers_logging.set_verbosity_error()
+        from mineru_html import MinerUHTML_Transformers, MinerUHTMLConfig
+
+        # Get model path from environment variable, if set
+        model_path = os.getenv("MINERU_HTML_MODEL_PATH")
+        if model_path is not None:
+            model_path = model_path.strip() or None
+            LOGGER.info("Using MinerU HTML model from environment variable: %s", model_path)
+
+        MINERU_EXTRACTOR = MinerUHTML_Transformers(
+            model_path=model_path,
+            config=MinerUHTMLConfig(
+                early_load=False,
+                output_format="none",
+                use_fall_back="empty",
+            )
         )
-        use_readability = False
 
-    # apply decision
-    if use_readability:
-        body, text, len_text = temppost_algo, algo_text, len_algo
-        LOGGER.debug("using generic algorithm: %s", options.source)
-    else:
-        LOGGER.debug("using custom extraction: %s", options.source)
+    except Exception as err:
+        MINERU_IMPORT_ERROR = True
+        LOGGER.warning("mineru_html unavailable: %s", err)
+        return None
+    return MINERU_EXTRACTOR
 
-    # override faulty extraction: try with justext
-    if (
-        body.xpath(SANITIZED_XPATH) or len_text < options.min_extracted_size
-    ):  # body.find(...)
-        LOGGER.debug(
-            "unclean document triggering justext examination: %s", options.source
-        )
-        body2, text2, len_text2 = justext_rescue(tree, options)
-        jt_result = bool(text2)
-        # prevent too short documents from replacing the main text
-        if text2 and not len_text > 4 * len_text2:  # threshold could be adjusted
-            LOGGER.debug("using justext, length: %s", len_text2)
-            body, text, len_text = body2, text2, len_text2
 
-    # post-processing: remove unwanted sections
-    if use_readability and not jt_result:
-        body, text, len_text = sanitize_tree(body, options)
+def _html_to_body(htmlstring: str) -> HtmlElement:
+    "Parse extracted HTML into a body element."
+    result = fromstring_bytes(htmlstring)
+    if result is None:
+        return HtmlElement()
+    if result.tag == "body":
+        return result
+    if result.tag == "html":
+        body_elem = result.find(".//body")
+        return body_elem if body_elem is not None else HtmlElement()
+    body = HtmlElement("body")
+    body.append(result)
+    return body
 
-    return body, text, len_text
+
+def mineru_rescue(tree: HtmlElement, options: Any) -> Tuple[HtmlElement, str, int]:
+    "Try to use MinerU HTML as an optional fallback extractor."
+    extractor = _get_mineru_extractor()
+    if extractor is None:
+        return HtmlElement(), "", 0
+    try:
+        result = extractor.process(tostring(tree, encoding="unicode"))
+        first = result[0]
+        output_data = getattr(first, "output_data", None)
+        main_html = getattr(output_data, "main_html", None) or getattr(first, "main_html", None)
+        main_html = str(main_html).strip() if main_html else ""
+    except Exception as err:
+        LOGGER.warning("mineru_html failed: %s %s", err, options.url)
+        return HtmlElement(), "", 0
+    if not main_html:
+        return HtmlElement(), "", 0
+    temppost_algo = _html_to_body(main_html)
+    algo_text = trim(
+        tostring(temppost_algo, method="text", encoding="utf-8").decode("utf-8")
+    )
+    return temppost_algo, algo_text, len(algo_text)
 
 
 def jt_stoplist_init() -> Tuple[str]:
@@ -152,10 +312,10 @@ def custom_justext(tree: HtmlElement, stoplist: Tuple[str]) -> Any:
     return paragraphs
 
 
-def try_justext(tree: HtmlElement, url: str, target_language: str) -> _Element:
+def try_justext(tree: HtmlElement, url: str, target_language: str) -> HtmlElement:
     """Second safety net: try with the generic algorithm justext"""
     # init
-    result_body = Element("body")
+    result_body = HtmlElement("body")
     # determine language
     if target_language in JUSTEXT_LANGUAGES:
         justext_stoplist = get_stoplist(JUSTEXT_LANGUAGES[target_language])
@@ -171,12 +331,12 @@ def try_justext(tree: HtmlElement, url: str, target_language: str) -> _Element:
             if paragraph.is_boilerplate:
                 continue
             # if duplicate_test(paragraph) is not True:
-            elem, elem.text = Element("p"), paragraph.text
+            elem, elem.text = HtmlElement("p"), paragraph.text
             result_body.append(elem)
     return result_body
 
 
-def justext_rescue(tree: HtmlElement, options: Any) -> Tuple[_Element, str, int]:
+def justext_rescue(tree: HtmlElement, options: Any) -> Tuple[HtmlElement, str, int]:
     """Try to use justext algorithm as a second fallback"""
     # additional cleaning
     tree = basic_cleaning(tree)

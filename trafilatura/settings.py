@@ -107,6 +107,39 @@ CONFIG_MAPPING = {
 }
 
 VALUE_NOT_SET: int = -1
+DEFAULT_FALLBACK_CHAIN = ("readability", "justext")
+ALLOWED_FALLBACKS = frozenset({"readability", "justext", "mineru"})
+
+
+def normalize_fallback_name(name: str) -> str:
+    "Normalize an external fallback extractor name."
+    normalized = name.strip().lower().replace("-", "_")
+    if normalized == "mineru_html":
+        return "mineru"
+    return normalized
+
+
+def normalize_fallback_chain(
+    fallback_chain: str | List[str] | tuple[str, ...] | None,
+) -> tuple[str, ...]:
+    "Normalize a fallback chain into a stable tuple."
+    if fallback_chain is None:
+        return DEFAULT_FALLBACK_CHAIN
+    if isinstance(fallback_chain, str):
+        fallback_chain = fallback_chain.split(",")
+    normalized = tuple(
+        normalize_fallback_name(name)
+        for name in fallback_chain
+        if name and name.strip()
+    )
+    unknown = [name for name in normalized if name not in ALLOWED_FALLBACKS]
+    if unknown:
+        allowed = ", ".join(sorted(ALLOWED_FALLBACKS))
+        raise ValueError(
+            f"Invalid fallback extractor(s): {', '.join(unknown)}. "
+            f"Allowed values: {allowed}"
+        )
+    return normalized
 
 
 class ExtractOptions:
@@ -134,6 +167,7 @@ class ExtractOptions:
         url_blacklist: set[str] | None = None,
         date_params: dict[str, str] | None = None,
         min_extracted_size: int = VALUE_NOT_SET,
+        fallback_chain: str | List[str] | tuple[str, ...] | None = None,
     ):
         self.source = _choose_url_or_source(url, source)
         self.format = _validate_format(output_format)
@@ -145,6 +179,10 @@ class ExtractOptions:
         # deduplication
         self.min_duplcheck_size: int = VALUE_NOT_SET
         self.max_repetitions: int = VALUE_NOT_SET
+        # fallback extractors
+        self.fallback_chain: tuple[str, ...] = normalize_fallback_chain(
+            fallback_chain
+        )
         # rest
         self.max_file_size: int = VALUE_NOT_SET
         self.min_file_size: int = VALUE_NOT_SET
@@ -217,6 +255,7 @@ def args_to_extractor(args: Any, url: Optional[str] = None) -> ExtractOptions:
         with_metadata=args.with_metadata,
         only_with_metadata=args.only_with_metadata,
         tei_validation=args.validate_tei,
+        fallback_chain=getattr(args, "fallback_chain", None),
     )
     for attr in ("fast", "images", "links"):
         setattr(options, attr, getattr(args, attr))

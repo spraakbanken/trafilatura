@@ -149,6 +149,7 @@ def bare_extraction(
     as_dict: bool = False,
     prune_xpath: Optional[Any] = None,
     min_extracted_size: int = VALUE_NOT_SET,
+    fallback_chain: Optional[Union[str, Tuple[str, ...]]] = None,
     config: Any = DEFAULT_CONFIG,
     options: Optional[ExtractOptions] = None,
 ) -> Optional[Union[Document, Dict[str, Any]]]:
@@ -181,6 +182,8 @@ def bare_extraction(
         as_dict: Will be deprecated, use the .as_dict() method of the document class.
         prune_xpath: Provide an XPath expression to prune the tree before extraction.
             can be str or list of str.
+        fallback_chain: Comma-separated string or tuple defining fallback extractors
+            to try in order.
         config: Directly provide a configparser configuration.
         options: Directly provide a whole extractor configuration.
 
@@ -219,6 +222,7 @@ def bare_extraction(
             url_blacklist=url_blacklist,
             date_params=date_extraction_params,
             min_extracted_size=min_extracted_size,
+            fallback_chain=fallback_chain,
         )
 
     try:
@@ -374,6 +378,7 @@ def extract(
     settingsfile: Optional[str] = None,
     prune_xpath: Optional[Any] = None,
     min_extracted_size: int = VALUE_NOT_SET,
+    fallback_chain: Optional[Union[str, Tuple[str, ...]]] = None,
     config: Any = DEFAULT_CONFIG,
     options: Optional[ExtractOptions] = None,
 ) -> Optional[str]:
@@ -408,6 +413,8 @@ def extract(
         settingsfile: Use a configuration file to override the standard settings.
         prune_xpath: Provide an XPath expression to prune the tree before extraction.
             can be str or list of str.
+        fallback_chain: Comma-separated string or tuple defining fallback extractors
+            to try in order.
         config: Directly provide a configparser configuration.
         options: Directly provide a whole extractor configuration.
 
@@ -441,6 +448,7 @@ def extract(
         settingsfile=settingsfile,
         prune_xpath=prune_xpath,
         min_extracted_size=min_extracted_size,
+        fallback_chain=fallback_chain,
         config=config,
         options=options,
     )
@@ -469,6 +477,7 @@ def extract_with_metadata(
     settingsfile: Optional[str] = None,
     prune_xpath: Optional[Any] = None,
     min_extracted_size: int = VALUE_NOT_SET,
+    fallback_chain: Optional[Union[str, Tuple[str, ...]]] = None,
     config: Any = DEFAULT_CONFIG,
     options: Optional[ExtractOptions] = None,
 ) -> Optional[Document]:
@@ -501,6 +510,8 @@ def extract_with_metadata(
         settingsfile: Use a configuration file to override the standard settings.
         prune_xpath: Provide an XPath expression to prune the tree before extraction.
             can be str or list of str.
+        fallback_chain: Comma-separated string or tuple defining fallback extractors
+            to try in order.
         config: Directly provide a configparser configuration.
         options: Directly provide a whole extractor configuration.
 
@@ -531,6 +542,7 @@ def extract_with_metadata(
         settingsfile=settingsfile,
         prune_xpath=prune_xpath,
         min_extracted_size=min_extracted_size,
+        fallback_chain=fallback_chain,
         config=config,
         options=options,
     )
@@ -582,6 +594,7 @@ def _internal_extraction(
     settingsfile: Optional[str] = None,
     prune_xpath: Optional[Any] = None,
     min_extracted_size: int = VALUE_NOT_SET,
+    fallback_chain: Optional[Union[str, Tuple[str, ...]]] = None,
     config: Any = DEFAULT_CONFIG,
     options: Optional[ExtractOptions] = None,
 ) -> Optional[Document]:
@@ -613,6 +626,7 @@ def _internal_extraction(
             url_blacklist=url_blacklist,
             date_params=date_extraction_params,
             min_extracted_size=min_extracted_size,
+            fallback_chain=fallback_chain,
         )
 
     # extraction

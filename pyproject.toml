@@ -56,7 +56,8 @@ dependencies = [
   "htmldate >= 1.9.2",
   "justext >= 3.0.1",
   # see tests on Github Actions
-  "lxml >= 5.3.0,<6.0.0",  # See issue https://github.com/adbar/trafilatura/issues/805
+  # "lxml >= 5.3.0,<6.0.0",  # See issue https://github.com/adbar/trafilatura/issues/805
+  "lxml >= 6.1.0", # Collides with minueru-html otherwise
   "urllib3 >= 2.6.0, < 3",
 ]
 
@@ -81,6 +82,7 @@ all = [
   "urllib3[socks]",
   "backports-zstd>=1.0.0; python_version<'3.14'"
 ]
+minueru = ["mineru-html >= 1.1.2"]
 
 [dependency-groups]
 dev = [

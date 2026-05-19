@@ -185,6 +185,12 @@ def add_args(parser: Any) -> Any:
         action="store_true",
     )
     group4.add_argument(
+        "--fallback-chain",
+        help="comma-separated fallback extractors in order; allowed: readability, justext, mineru",
+        metavar="EXTRACTORS",
+        type=str,
+    )
+    group4.add_argument(
         "--config-file",
         help="override standard extraction parameters with a custom config file",
         type=str,
